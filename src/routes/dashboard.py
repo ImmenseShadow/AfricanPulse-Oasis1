@@ -1,0 +1,36 @@
+from datetime import datetime, timedelta, timezone
+
+from flask import Blueprint, flash, redirect, render_template, url_for
+
+from src import deps
+
+bp = Blueprint("dashboard", __name__)
+
+
+@bp.get("/")
+def index():
+    articles = deps.articles()
+    stats = articles.stats()
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat(timespec="seconds")
+    runs = deps.runs()
+    return render_template(
+        "dashboard.html",
+        stats=stats,
+        recent_count=articles.count_collected_since(since),
+        configured=deps.source_repo().count(),
+        enabled=deps.source_repo().count(enabled_only=True),
+        categories=articles.category_counts(),
+        latest_articles=articles.search(sort_by="collected_at", limit=8),
+        latest_run=runs.latest_run(),
+        running=runs.running_run(),
+    )
+
+
+@bp.post("/collect")
+def collect():
+    run_id, problem = deps.collection_manager().start()
+    if problem:
+        flash(problem, "error")
+        return redirect(url_for("dashboard.index"))
+    flash("Collection started.", "info")
+    return redirect(url_for("activity.index"))

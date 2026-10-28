@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}Collection Activity{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Collection Activity</h1><p class="muted">A record of real collection attempts, newest first.</p></div>
+  <form method="post" action="{{ url_for('dashboard.collect') }}" class="inline-form">
+    {{ csrf_input() }}
+    <button class="btn btn-primary" type="submit"{% if running %} disabled{% endif %}>Collect news now</button>
+  </form>
+</div>
+
+{% if running %}
+<p class="flash flash-info" id="collection-status" data-running="true" data-status-url="{{ url_for('activity.status') }}">
+  Collection in progress. This page will refresh when it finishes.
+</p>
+{% endif %}
+
+{% if runs %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Started</th><th>Finished</th><th>Result</th><th>Sources</th><th>Discovered</th><th>New</th><th>Duplicates skipped</th><th>Failed sources</th></tr></thead>
+  <tbody>
+  {% for r in runs %}
+    <tr>
+      <td data-label="Started">{{ r.started_at|dt }}</td>
+      <td data-label="Finished">{{ r.finished_at|dt('In progress') }}</td>
+      <td data-label="Result"><span class="badge badge-{{ r.status }}">{{ r.status|run_status }}</span></td>
+      <td data-label="Sources">{{ r.sources_attempted }}</td>
+      <td data-label="Discovered">{{ r.articles_discovered }}</td>
+      <td data-label="New">{{ r.new_articles }}</td>
+      <td data-label="Duplicates skipped">{{ r.duplicates_skipped }}</td>
+      <td data-label="Failed sources">{{ r.sources_failed }}</td>
+    </tr>
+    {% if r.sources or r.error_summary %}
+    <tr class="detail-row"><td colspan="8">
+      <details>
+        <summary>Details for this run</summary>
+        {% if r.error_summary %}<p class="error-text">{{ r.error_summary }}</p>{% endif %}
+        {% if r.sources %}
+        <ul class="plain">
+          {% for s in r.sources %}
+          <li><strong>{{ s.source_name }}</strong>:
+            {% if s.ok %}{{ s.fetched }} entries, {{ s.inserted }} new, {{ s.duplicates }} duplicates{% if s.invalid %}, {{ s.invalid }} unusable entries skipped{% endif %}
+            {% else %}<span class="error-text">failed. {{ s.error }}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </details>
+    </td></tr>
+    {% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="card empty"><h3>No collection runs yet</h3>
+<p>Press <strong>Collect news now</strong> to read your enabled sources. Each attempt is recorded here.</p></div>
+{% endif %}
+{% endblock %}

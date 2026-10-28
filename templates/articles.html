@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import article_item, pagination %}
+{% block title %}Collected News{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Collected News</h1>
+  <p class="muted">{{ total }} article{{ '' if total == 1 else 's' }} match your filters. Summaries come from the publishers' feeds and are unverified.</p></div>
+</div>
+
+<form method="get" class="card filter-form" role="search">
+  <div class="field wide"><label for="q">Search titles and summaries</label>
+    <input id="q" type="search" name="q" value="{{ q }}" maxlength="200"></div>
+  <div class="field"><label for="category">Category</label>
+    <select id="category" name="category">
+      <option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c }}"{% if c == category %} selected{% endif %}>{{ c }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label for="source">Source</label>
+    <select id="source" name="source">
+      <option value="">All sources</option>
+      {% for s in sources %}<option value="{{ s }}"{% if s == source %} selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label for="status">Editorial status</label>
+    <select id="status" name="status">
+      <option value="">Any status</option>
+      {% for s in statuses %}<option value="{{ s }}"{% if s == status %} selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label for="sort">Sort by</label>
+    <select id="sort" name="sort">
+      {% for key, label in sort_choices.items() %}<option value="{{ key }}"{% if key == sort %} selected{% endif %}>{{ label }} (newest first)</option>{% endfor %}
+    </select></div>
+  <div class="field actions-field">
+    <button class="btn btn-primary" type="submit">Apply</button>
+    <a class="btn btn-ghost" href="{{ url_for('articles.list_articles', category='', sort=sort) }}">Reset</a>
+  </div>
+</form>
+
+{% if items %}
+  {% for a in items %}{{ article_item(a) }}{% endfor %}
+  {{ pagination(page, pages) }}
+{% elif has_any %}
+  <div class="card empty"><h3>No articles match</h3><p>Try a different search or clear the filters.</p></div>
+{% else %}
+  <div class="card empty"><h3>No articles collected yet</h3>
+  <p>Go to <a href="{{ url_for('dashboard.index') }}">Overview</a> and press <strong>Collect news now</strong>.</p></div>
+{% endif %}
+{% endblock %}

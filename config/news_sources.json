@@ -1,0 +1,10 @@
+{
+  "_readme": "Add or remove feeds here. Set enabled to false to skip a feed without deleting it. Feed URLs were not verified at build time; check them from the Source health table after your first collection.",
+  "sources": [
+    {"name": "BBC News Africa", "url": "https://feeds.bbci.co.uk/news/world/africa/rss.xml", "enabled": true},
+    {"name": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "enabled": true},
+    {"name": "TechCabal", "url": "https://techcabal.com/feed/", "enabled": true},
+    {"name": "Mail & Guardian", "url": "https://mg.co.za/feed/", "enabled": true},
+    {"name": "Premium Times Nigeria", "url": "https://www.premiumtimesng.com/feed", "enabled": true}
+  ]
+}

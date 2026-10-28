@@ -1,0 +1,30 @@
+{% macro csrf_input() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro article_item(a) %}
+<article class="card article">
+  <h3 class="article-title"><a href="{{ url_for('articles.detail', article_id=a.id) }}">{{ a.title }}</a></h3>
+  <p class="meta">
+    <span>{{ a.source }}</span>
+    <span class="badge">{{ a.category }}</span>
+    {% if a.status != 'New' %}<span class="badge badge-gold">{{ a.status }}</span>{% endif %}
+  </p>
+  <p class="meta muted">
+    Published: {{ a.published_at|dt('not provided by the source') }} &middot; Collected: {{ a.collected_at|dt }}
+  </p>
+  {% if a.summary %}<p class="summary">{{ a.summary }}</p>{% else %}<p class="muted">The source provided no summary.</p>{% endif %}
+  <p class="actions">
+    <a class="btn btn-small" href="{{ a.url }}" target="_blank" rel="noopener noreferrer">Open original source</a>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('articles.detail', article_id=a.id) }}">Details</a>
+  </p>
+</article>
+{% endmacro %}
+
+{% macro pagination(page, pages) %}
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Pages">
+  {% if page > 1 %}<a class="btn btn-small btn-ghost" href="{{ page_url(page - 1) }}">&larr; Previous</a>{% endif %}
+  <span class="muted">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-small btn-ghost" href="{{ page_url(page + 1) }}">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input, article_item %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Overview</h1>
+    <p class="muted">The current state of the collection system, read from the database.</p>
+  </div>
+  <form method="post" action="{{ url_for('dashboard.collect') }}" class="inline-form">
+    {{ csrf_input() }}
+    <button class="btn btn-primary btn-large" type="submit"{% if running %} disabled{% endif %}>
+      {% if running %}Collection running...{% else %}Collect news now{% endif %}
+    </button>
+  </form>
+</div>
+
+{% if running %}
+<p class="flash flash-info" id="collection-status" data-running="true" data-status-url="{{ url_for('activity.status') }}">
+  A collection run is in progress. This page will refresh when it finishes.
+</p>
+{% endif %}
+
+<section class="stat-grid" aria-label="Statistics">
+  <div class="card stat"><span class="stat-value">{{ stats.total }}</span><span class="stat-label">Collected articles</span></div>
+  <div class="card stat"><span class="stat-value">{{ configured }}</span><span class="stat-label">Configured sources ({{ enabled }} enabled)</span></div>
+  <div class="card stat"><span class="stat-value">{{ stats.sources }}</span><span class="stat-label">Sources with stored articles</span></div>
+  <div class="card stat"><span class="stat-value">{{ recent_count }}</span><span class="stat-label">New in the last 24 hours</span></div>
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Latest collection</h2>
+    {% if latest_run %}
+      <p><span class="badge badge-{{ latest_run.status }}">{{ latest_run.status|run_status }}</span>
+         {{ latest_run.started_at|dt }}</p>
+      <p class="muted">{{ latest_run.articles_discovered }} discovered, {{ latest_run.new_articles }} new,
+         {{ latest_run.duplicates_skipped }} duplicates skipped, {{ latest_run.sources_failed }} of {{ latest_run.sources_attempted }} sources failed.</p>
+      {% if latest_run.error_summary %}<p class="error-text">{{ latest_run.error_summary }}</p>{% endif %}
+      <p><a href="{{ url_for('activity.index') }}">View collection activity</a></p>
+    {% else %}
+      <p class="muted">No collection has been run yet.</p>
+    {% endif %}
+  </section>
+  <section class="card">
+    <h2>Articles by category</h2>
+    {% if categories %}
+      <ul class="bar-list">
+      {% for name, n in categories.items() %}
+        <li>
+          <a href="{{ url_for('articles.list_articles', category=name) }}">{{ name }}</a>
+          <progress max="{{ stats.total }}" value="{{ n }}">{{ n }}</progress>
+          <span>{{ n }}</span>
+        </li>
+      {% endfor %}
+      </ul>
+      <p class="muted small">Categories are assigned by simple keyword rules, not AI. Unclear articles stay Uncategorized.</p>
+    {% else %}
+      <p class="muted">No articles to count yet.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section>
+  <h2>Latest collected articles</h2>
+  {% if latest_articles %}
+    {% for a in latest_articles %}{{ article_item(a) }}{% endfor %}
+    <p><a class="btn btn-ghost" href="{{ url_for('articles.list_articles') }}">Browse all collected news</a></p>
+  {% else %}
+    <div class="card empty">
+      <h3>Nothing collected yet</h3>
+      <p>Review your feeds on the <a href="{{ url_for('sources.index') }}">Data Sources</a> page, then press
+         <strong>Collect news now</strong>. Articles appear here once at least one source has been read successfully.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}Edit source{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('sources.index') }}">&larr; Back to Data Sources</a></p>
+<section class="card">
+  <h1>Edit source</h1>
+  <p class="muted">Renaming a source also renames it on articles already collected from it.</p>
+  <form method="post" action="{{ url_for('sources.update', source_id=source.id) }}" class="stack">
+    {{ csrf_input() }}
+    <div class="field"><label for="name">Name</label>
+      <input id="name" name="name" value="{{ form.get('name', source.name) }}" maxlength="80" required></div>
+    <div class="field"><label for="url">Feed URL</label>
+      <input id="url" name="url" type="url" value="{{ form.get('url', source.feed_url) }}" maxlength="2048" required></div>
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">Save changes</button>
+      <a class="btn btn-ghost" href="{{ url_for('sources.index') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

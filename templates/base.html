@@ -1,0 +1,43 @@
+{% from '_macros.html' import csrf_input %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Overview{% endblock %} | AfricanPulse Oasis</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="{{ url_for('dashboard.index') }}">
+        <span class="brand-mark" aria-hidden="true">AP</span>
+        <span>AfricanPulse <strong>Oasis</strong></span>
+      </a>
+      <nav class="main-nav" aria-label="Main">
+        {% set bp = request.blueprint %}
+        <a href="{{ url_for('dashboard.index') }}"{% if bp == 'dashboard' %} aria-current="page"{% endif %}>Overview</a>
+        <a href="{{ url_for('articles.list_articles') }}"{% if bp == 'articles' %} aria-current="page"{% endif %}>Collected News</a>
+        <a href="{{ url_for('sources.index') }}"{% if bp == 'sources' %} aria-current="page"{% endif %}>Data Sources</a>
+        <a href="{{ url_for('activity.index') }}"{% if bp == 'activity' %} aria-current="page"{% endif %}>Collection Activity</a>
+        <a href="{{ url_for('settings.index') }}"{% if bp == 'settings' %} aria-current="page"{% endif %}>Settings</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main" class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flashes" role="status" aria-live="polite">
+        {% for category, message in messages %}<p class="flash flash-{{ category }}">{{ message }}</p>{% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>Collected items are third party material from public feeds. They are not fact checked and are not BOS writing. Always open the original source before using information.</p>
+  </footer>
+</body>
+</html>

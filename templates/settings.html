@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Settings</h1><p class="muted">Preferences stored in the local database. No secrets are shown here.</p></div></div>
+<section class="card">
+  <form method="post" action="{{ url_for('settings.save') }}" class="stack">
+    {{ csrf_input() }}
+    <div class="field"><label for="default_sort">Default article sorting</label>
+      <select id="default_sort" name="default_sort">
+        {% for key, label in sort_choices.items() %}<option value="{{ key }}"{% if key == values.default_sort %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="default_category">Default category filter</label>
+      <select id="default_category" name="default_category">
+        <option value="">All categories</option>
+        {% for c in categories %}<option value="{{ c }}"{% if c == values.default_category %} selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="page_size">Articles per page</label>
+      <select id="page_size" name="page_size">
+        {% for n in page_sizes %}<option value="{{ n }}"{% if n|string == values.page_size|string %} selected{% endif %}>{{ n }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="request_timeout">Feed request timeout (seconds)</label>
+      <input id="request_timeout" name="request_timeout" type="number" min="{{ timeout_range[0] }}" max="{{ timeout_range[1] }}" value="{{ values.request_timeout }}" required>
+      <p class="muted small">Between {{ timeout_range[0] }} and {{ timeout_range[1] }}. Applies to collection and feed tests.</p></div>
+    <div><button class="btn btn-primary" type="submit">Save settings</button></div>
+  </form>
+</section>
+{% endblock %}

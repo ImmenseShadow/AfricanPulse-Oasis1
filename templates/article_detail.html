@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}{{ article.title }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('articles.list_articles') }}">&larr; Back to Collected News</a></p>
+<article class="card">
+  <h1>{{ article.title }}</h1>
+  <dl class="details">
+    <dt>Publisher</dt><dd>{{ article.source }}</dd>
+    <dt>Category</dt><dd><span class="badge">{{ article.category }}</span> <span class="muted small">keyword based, may be wrong</span></dd>
+    <dt>Published</dt><dd>{{ article.published_at|dt('Not provided by the source') }}</dd>
+    <dt>First collected</dt><dd>{{ article.collected_at|dt }}</dd>
+    <dt>Last seen in a feed</dt><dd>{{ article.last_seen_at|dt }}</dd>
+    <dt>Original link</dt><dd><a href="{{ article.url }}" target="_blank" rel="noopener noreferrer">{{ article.url }}</a></dd>
+  </dl>
+  <h2>Publisher summary (unverified)</h2>
+  {% if article.summary %}<p class="summary">{{ article.summary }}</p>
+  {% else %}<p class="muted">The source provided no summary.</p>{% endif %}
+  <p><a class="btn btn-primary" href="{{ article.url }}" target="_blank" rel="noopener noreferrer">Open original source</a></p>
+</article>
+
+<section class="card">
+  <h2>BOS editorial review</h2>
+  <p class="muted">This section is BOS writing. Collection does not mean the article has been fact checked or approved.</p>
+  <form method="post" action="{{ url_for('articles.save_editorial', article_id=article.id) }}">
+    {{ csrf_input() }}
+    <div class="field"><label for="status">Editorial status</label>
+      <select id="status" name="status">
+        {% for s in statuses %}<option value="{{ s }}"{% if s == article.status %} selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="notes">Editorial notes</label>
+      <textarea id="notes" name="notes" rows="5" maxlength="2000">{{ article.notes }}</textarea></div>
+    <button class="btn btn-primary" type="submit">Save</button>
+  </form>
+</section>
+{% endblock %}

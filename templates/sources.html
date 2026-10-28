@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}Data Sources{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Data Sources</h1>
+<p class="muted">RSS and Atom feeds the collector reads. Saving a feed does not prove it works; use Test.</p></div></div>
+
+<section class="card">
+  <h2>Add a source</h2>
+  <form method="post" action="{{ url_for('sources.add') }}" class="stack">
+    {{ csrf_input() }}
+    <div class="field"><label for="name">Name</label>
+      <input id="name" name="name" value="{{ form.get('name', '') }}" maxlength="80" required></div>
+    <div class="field"><label for="url">Feed URL</label>
+      <input id="url" name="url" type="url" value="{{ form.get('url', '') }}" maxlength="2048" required placeholder="https://example.com/feed.xml"></div>
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">Add source</button>
+      <button class="btn btn-ghost" type="submit" formaction="{{ url_for('sources.test_url') }}">Test URL first</button>
+    </div>
+  </form>
+</section>
+
+<section>
+  <h2>Configured sources ({{ sources|length }})</h2>
+  {% if sources %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Name</th><th>Feed URL</th><th>State</th><th>Latest collection</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for s in sources %}
+      <tr>
+        <td data-label="Name">{{ s.name }}</td>
+        <td data-label="Feed URL" class="url-cell">{{ s.feed_url }}</td>
+        <td data-label="State">{% if s.enabled %}<span class="badge badge-completed">Enabled</span>{% else %}<span class="badge">Disabled</span>{% endif %}</td>
+        <td data-label="Latest collection">
+          {% if s.last_status == 'ok' %}<span class="badge badge-completed">OK</span> {{ s.last_fetched_at|dt }}
+          {% elif s.last_status == 'error' %}<span class="badge badge-failed">Failed</span> {{ s.last_fetched_at|dt }}<br><span class="error-text small">{{ s.last_error }}</span>
+          {% else %}<span class="muted">Not collected yet</span>{% endif %}
+        </td>
+        <td data-label="Actions" class="row-actions">
+          <form method="post" action="{{ url_for('sources.test_saved', source_id=s.id) }}">{{ csrf_input() }}<button class="btn btn-small btn-ghost" type="submit">Test</button></form>
+          <a class="btn btn-small btn-ghost" href="{{ url_for('sources.edit', source_id=s.id) }}">Edit</a>
+          <form method="post" action="{{ url_for('sources.toggle', source_id=s.id) }}">{{ csrf_input() }}
+            <input type="hidden" name="enabled" value="{{ 0 if s.enabled else 1 }}">
+            <button class="btn btn-small btn-ghost" type="submit">{{ 'Disable' if s.enabled else 'Enable' }}</button></form>
+          <form method="post" action="{{ url_for('sources.delete', source_id=s.id) }}" data-confirm="Remove {{ s.name }}? Articles already collected are kept.">{{ csrf_input() }}
+            <button class="btn btn-small btn-danger" type="submit">Remove</button></form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="card empty"><h3>No sources configured</h3><p>Add a feed URL above to start collecting.</p></div>
+  {% endif %}
+</section>
+{% endblock %}
