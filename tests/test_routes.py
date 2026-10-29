@@ -21,13 +21,14 @@ def fake_fetch(url, timeout=15):
 
 class WebTestCase(unittest.TestCase):
     sync = True
+    fetch_feed = staticmethod(fake_fetch)
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
         self.app = create_app({
             "DATABASE_PATH": str(Path(self._tmp.name) / "web.db"), "SECRET_KEY": "test-key",
-            "COLLECT_SYNC": self.sync, "SEED_SOURCES": False, "FETCH_FEED": fake_fetch,
+            "COLLECT_SYNC": self.sync, "SEED_SOURCES": False, "FETCH_FEED": self.fetch_feed,
             "ALLOW_PRIVATE_FEEDS": False,
         })
         self.client = self.app.test_client()

@@ -8,7 +8,7 @@ from typing import Iterator
 
 from src.models.article import STATUSES
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 _STATUS_LIST = ", ".join(f"'{s}'" for s in STATUSES)
 
 SCHEMA = f"""
@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS sources (
     created_at TEXT,
     last_fetched_at TEXT,
     last_status TEXT,
-    last_error TEXT
+    last_error TEXT,
+    source_type TEXT NOT NULL DEFAULT 'rss',
+    alert_topic TEXT
 );
 
 CREATE TABLE IF NOT EXISTS articles (
@@ -35,8 +37,23 @@ CREATE TABLE IF NOT EXISTS articles (
     summary TEXT,
     category TEXT NOT NULL DEFAULT 'Uncategorized',
     status TEXT NOT NULL DEFAULT 'New' CHECK (status IN ({_STATUS_LIST})),
-    notes TEXT NOT NULL DEFAULT ''
+    notes TEXT NOT NULL DEFAULT '',
+    publisher TEXT,
+    alert_topic TEXT
 );
+
+CREATE TABLE IF NOT EXISTS article_sources (
+    id INTEGER PRIMARY KEY,
+    article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+    source_name TEXT NOT NULL,
+    source_type TEXT NOT NULL DEFAULT 'rss',
+    alert_topic TEXT,
+    first_seen_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL,
+    UNIQUE (article_id, source_name)
+);
+CREATE INDEX IF NOT EXISTS idx_article_sources_article ON article_sources(article_id);
 
 CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category);
 CREATE INDEX IF NOT EXISTS idx_articles_source ON articles(source);
@@ -69,7 +86,11 @@ CREATE TABLE IF NOT EXISTS collection_run_sources (
     inserted INTEGER NOT NULL DEFAULT 0,
     duplicates INTEGER NOT NULL DEFAULT 0,
     invalid INTEGER NOT NULL DEFAULT 0,
-    error TEXT
+    error TEXT,
+    source_id INTEGER,
+    source_type TEXT,
+    started_at TEXT,
+    finished_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_run_sources_run ON collection_run_sources(run_id);
 
@@ -108,10 +129,32 @@ class Database:
 
     @staticmethod
     def _migrate(conn: sqlite3.Connection) -> None:
-        """Bring a Phase 1 (Streamlit era) database up to the current schema."""
-        columns = {r["name"] for r in conn.execute("PRAGMA table_info(sources)")}
-        if "enabled" not in columns:
-            conn.execute("ALTER TABLE sources ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
-        if "created_at" not in columns:
-            conn.execute("ALTER TABLE sources ADD COLUMN created_at TEXT")
+        """Bring an older database up to the current schema. Only adds; never deletes data."""
+        previous_version = conn.execute("PRAGMA user_version").fetchone()[0]
+
+        def add_columns(table: str, wanted: dict[str, str]) -> None:
+            have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+            for column, definition in wanted.items():
+                if column not in have:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+        add_columns("sources", {
+            "enabled": "INTEGER NOT NULL DEFAULT 1",
+            "created_at": "TEXT",
+            "source_type": "TEXT NOT NULL DEFAULT 'rss'",   # Increment 2
+            "alert_topic": "TEXT",
+        })
+        add_columns("articles", {"publisher": "TEXT", "alert_topic": "TEXT"})
+        add_columns("collection_run_sources", {
+            "source_id": "INTEGER", "source_type": "TEXT", "started_at": "TEXT", "finished_at": "TEXT",
+        })
+        if previous_version < 3:
+            # Give every existing article its first source reference so nothing is lost.
+            conn.execute(
+                """INSERT OR IGNORE INTO article_sources
+                       (article_id, source_id, source_name, source_type, first_seen_at, last_seen_at)
+                   SELECT a.id, (SELECT s.id FROM sources s WHERE s.name = a.source LIMIT 1),
+                          a.source, 'rss', a.collected_at, a.last_seen_at
+                   FROM articles a"""
+            )
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

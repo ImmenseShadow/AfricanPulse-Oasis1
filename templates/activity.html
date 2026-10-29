@@ -40,9 +40,10 @@
         {% if r.sources %}
         <ul class="plain">
           {% for s in r.sources %}
-          <li><strong>{{ s.source_name }}</strong>:
+          <li><strong>{{ s.source_name }}</strong>{% if s.source_type == 'google_alert' %} <span class="badge">Google Alert</span>{% endif %}:
             {% if s.ok %}{{ s.fetched }} entries, {{ s.inserted }} new, {{ s.duplicates }} duplicates{% if s.invalid %}, {{ s.invalid }} unusable entries skipped{% endif %}
             {% else %}<span class="error-text">failed. {{ s.error }}</span>{% endif %}
+            {% if s.started_at %}<span class="muted small">(started {{ s.started_at|dt }}{% if s.finished_at %}, finished {{ s.finished_at|dt }}{% endif %})</span>{% endif %}
           </li>
           {% endfor %}
         </ul>

@@ -9,6 +9,18 @@ Follow the README install steps, then `python -m unittest discover -s tests -t .
 In the website: Data Sources, then Add source. In code: nothing to change.
 To change the starting list for brand new databases, edit `../config/news_sources.json`.
 
+## Add a Google Alerts source
+
+See "Google Alerts (Increment 2)" in the README. In code, a source is a row in `sources` with `source_type = 'google_alert'`
+and an `alert_topic`. To add another source type: add it to `SOURCE_TYPES` in `src/models/article.py`, handle it in
+`process_entry` and, if it needs special merge behaviour, in `ArticleRepository.upsert`.
+
+## Writing tests for feeds
+
+Never call the internet. Use the fixtures in `tests/helpers.py` (`GOOGLE_ALERT_SAMPLE` is shaped like a real alert feed),
+fake fetch functions, or a mocked `requests` session. Patch `src.url_safety.resolve_ips` when a test goes through
+`fetch_feed`, so host names do not need real DNS. `tests/test_google_alerts.py` shows each pattern.
+
 ## Add a category rule
 
 Add keywords to `RULES` in `src/processors/categorizer.py` (new categories also go in `CATEGORIES` in `src/models/article.py`), then add a test.

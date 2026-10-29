@@ -46,7 +46,10 @@ def detail(article_id: int):
     article = deps.articles().get(article_id)
     if article is None:
         abort(404, description="That article was not found.")
-    return render_template("article_detail.html", article=article, statuses=STATUSES)
+    found_by = deps.articles().sources_for(article_id)
+    only_alerts = bool(found_by) and all(s["source_type"] == "google_alert" for s in found_by)
+    return render_template("article_detail.html", article=article, statuses=STATUSES,
+                           found_by=found_by, only_alerts=only_alerts)
 
 
 @bp.post("/articles/<int:article_id>/editorial")

@@ -11,6 +11,7 @@ env/
 logs/
 build/
 dist/
+AfricanPulse-Oasis.zip
 *.egg-info/
 .pytest_cache/
 .streamlit/secrets.toml

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import requests
 
@@ -34,9 +34,14 @@ class ParseTests(unittest.TestCase):
 
 
 class FetchTests(unittest.TestCase):
+    def setUp(self):
+        patcher = patch("src.url_safety.resolve_ips", return_value=["93.184.216.34"])
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_fetch_uses_timeout_and_parses(self):
         session = Mock()
-        session.get.return_value = Mock(content=ATOM_SAMPLE, raise_for_status=Mock())
+        session.get.return_value = Mock(content=ATOM_SAMPLE, status_code=200, raise_for_status=Mock())
         entries = fetch_feed("https://feed.example/atom", timeout=7, session=session)
         self.assertEqual(len(entries), 2)
         self.assertEqual(session.get.call_args.kwargs["timeout"], 7)
@@ -46,7 +51,7 @@ class FetchTests(unittest.TestCase):
         session.get.side_effect = requests.ConnectionError("boom")
         with self.assertRaises(CollectorError):
             fetch_feed("https://feed.example/x", session=session)
-        bad = Mock(content=b"")
+        bad = Mock(content=b"", status_code=404)
         bad.raise_for_status.side_effect = requests.HTTPError("404")
         session.get.side_effect = None
         session.get.return_value = bad

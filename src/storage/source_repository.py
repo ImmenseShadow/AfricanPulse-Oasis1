@@ -28,12 +28,16 @@ class SourceRepository:
             ).fetchone()
         return row is not None
 
-    def add(self, name: str, feed_url: str, created_at: str, enabled: bool = True) -> int:
+    def add(
+        self, name: str, feed_url: str, created_at: str, enabled: bool = True,
+        source_type: str = "rss", alert_topic: Optional[str] = None,
+    ) -> int:
         """Insert a source. Raises sqlite3.IntegrityError if the URL already exists."""
         with self.db.connect() as conn:
             cursor = conn.execute(
-                "INSERT INTO sources (name, feed_url, enabled, created_at) VALUES (?, ?, ?, ?)",
-                (name, feed_url, int(enabled), created_at),
+                "INSERT INTO sources (name, feed_url, enabled, created_at, source_type, alert_topic) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (name, feed_url, int(enabled), created_at, source_type, alert_topic),
             )
             return cursor.lastrowid
 
@@ -45,17 +49,25 @@ class SourceRepository:
             )
             return cursor.rowcount > 0
 
-    def update(self, source_id: int, name: str, feed_url: str) -> bool:
+    def update(
+        self, source_id: int, name: str, feed_url: str,
+        source_type: str = "rss", alert_topic: Optional[str] = None,
+    ) -> bool:
         """Edit a source. Articles stored under the old name follow the rename."""
         with self.db.connect() as conn:
             row = conn.execute("SELECT name FROM sources WHERE id = ?", (source_id,)).fetchone()
             if row is None:
                 return False
             conn.execute(
-                "UPDATE sources SET name = ?, feed_url = ? WHERE id = ?", (name, feed_url, source_id)
+                "UPDATE sources SET name = ?, feed_url = ?, source_type = ?, alert_topic = ? WHERE id = ?",
+                (name, feed_url, source_type, alert_topic, source_id),
             )
             if row["name"] != name:
                 conn.execute("UPDATE articles SET source = ? WHERE source = ?", (name, row["name"]))
+                conn.execute(
+                    "UPDATE OR IGNORE article_sources SET source_name = ? WHERE source_name = ?",
+                    (name, row["name"]),
+                )
             return True
 
     def set_enabled(self, source_id: int, enabled: bool) -> bool:

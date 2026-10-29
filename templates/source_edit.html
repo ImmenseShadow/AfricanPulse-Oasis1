@@ -10,6 +10,12 @@
     {{ csrf_input() }}
     <div class="field"><label for="name">Name</label>
       <input id="name" name="name" value="{{ form.get('name', source.name) }}" maxlength="80" required></div>
+    <div class="field"><label for="source_type">Source type</label>
+      <select id="source_type" name="source_type">
+        {% for key, label in SOURCE_TYPES.items() %}<option value="{{ key }}"{% if key == form.get('source_type', source.source_type) %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="alert_topic">Alert topic <span class="muted small">(required for Google Alerts)</span></label>
+      <input id="alert_topic" name="alert_topic" value="{{ form.get('alert_topic', source.alert_topic or '') }}" maxlength="120"></div>
     <div class="field"><label for="url">Feed URL</label>
       <input id="url" name="url" type="url" value="{{ form.get('url', source.feed_url) }}" maxlength="2048" required></div>
     <div class="actions">

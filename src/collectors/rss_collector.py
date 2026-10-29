@@ -5,6 +5,7 @@ Only the public feed URL is requested; article pages are never scraped.
 from __future__ import annotations
 
 from typing import Optional
+from urllib.parse import urljoin
 from xml.etree.ElementTree import Element, ParseError
 
 import requests
@@ -12,8 +13,11 @@ from defusedxml import ElementTree as SafeET
 from defusedxml.common import DefusedXmlException
 
 from config.settings import MAX_FEED_BYTES, REQUEST_TIMEOUT_SECONDS, USER_AGENT
+from src.url_safety import UnsafeDestinationError, check_destination
 
 _FEED_ROOTS = {"rss", "feed", "RDF"}
+_REDIRECT_CODES = {301, 302, 303, 307, 308}
+MAX_REDIRECTS = 5
 
 
 class CollectorError(Exception):
@@ -69,19 +73,43 @@ def parse_feed(content: bytes) -> list[dict]:
     ]
 
 
+def _get_checked(client, url: str, timeout: int, allow_private: bool):
+    """GET with redirects followed by hand so every destination is validated first.
+
+    The error messages deliberately omit the URL, which may carry a feed token."""
+    current = url
+    for _ in range(MAX_REDIRECTS + 1):
+        try:
+            check_destination(current, allow_private)
+        except UnsafeDestinationError as exc:
+            raise CollectorError(f"Could not fetch feed: {exc}")
+        response = client.get(
+            current,
+            timeout=timeout,
+            allow_redirects=False,
+            headers={"User-Agent": USER_AGENT, "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml"},
+        )
+        status = getattr(response, "status_code", None)
+        if isinstance(status, int) and status in _REDIRECT_CODES:
+            location = response.headers.get("Location")
+            if not location:
+                raise CollectorError("Could not fetch feed: the server sent a redirect without a destination.")
+            current = urljoin(current, location)
+            continue
+        return response
+    raise CollectorError("Could not fetch feed: too many redirects.")
+
+
 def fetch_feed(
     url: str,
     timeout: int = REQUEST_TIMEOUT_SECONDS,
     session: Optional[requests.Session] = None,
+    allow_private: bool = False,
 ) -> list[dict]:
     """Download and parse one feed. Raises CollectorError on any failure."""
     client = session or requests
     try:
-        response = client.get(
-            url,
-            timeout=timeout,
-            headers={"User-Agent": USER_AGENT, "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml"},
-        )
+        response = _get_checked(client, url, timeout, allow_private)
         response.raise_for_status()
     except requests.Timeout:
         raise CollectorError("Could not fetch feed: the request timed out.")

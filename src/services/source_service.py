@@ -10,10 +10,13 @@ from urllib.parse import urlsplit
 
 from config.settings import FeedSource
 from src.collectors.rss_collector import CollectorError
+from src.models.article import SOURCE_GOOGLE_ALERT, SOURCE_RSS, SOURCE_TYPES
 from src.storage.settings_repository import SettingsRepository
 from src.storage.source_repository import SourceRepository
+from src.url_safety import is_blocked_host_name
 
 MAX_NAME_LENGTH = 80
+MAX_TOPIC_LENGTH = 120
 MAX_URL_LENGTH = 2048
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -28,6 +31,25 @@ def validate_name(name: str) -> str:
         raise ValidationError("Enter a source name.")
     if len(cleaned) > MAX_NAME_LENGTH:
         raise ValidationError(f"Source names can have at most {MAX_NAME_LENGTH} characters.")
+    return cleaned
+
+
+def validate_source_type(source_type: Optional[str]) -> str:
+    cleaned = (source_type or SOURCE_RSS).strip()
+    if cleaned not in SOURCE_TYPES:
+        raise ValidationError("Choose a valid source type.")
+    return cleaned
+
+
+def validate_alert_topic(topic: Optional[str], source_type: str) -> Optional[str]:
+    """The topic is required for Google Alerts and ignored for other source types."""
+    if source_type != SOURCE_GOOGLE_ALERT:
+        return None
+    cleaned = " ".join(_CONTROL_CHARS.sub(" ", topic or "").split())
+    if not cleaned:
+        raise ValidationError("Enter the alert topic, the search terms this Google Alert follows.")
+    if len(cleaned) > MAX_TOPIC_LENGTH:
+        raise ValidationError(f"Alert topics can have at most {MAX_TOPIC_LENGTH} characters.")
     return cleaned
 
 
@@ -53,7 +75,7 @@ def validate_feed_url(url: str, allow_private: bool = False) -> str:
         raise ValidationError("Do not put a username or password in the feed URL.")
     if not allow_private:
         lowered = host.lower()
-        blocked = lowered == "localhost" or lowered.endswith(".localhost") or lowered.isdigit()
+        blocked = is_blocked_host_name(lowered) or lowered.isdigit()
         try:
             ip = ipaddress.ip_address(host)
             blocked = blocked or not ip.is_global
@@ -81,26 +103,42 @@ class SourceService:
         self.allow_private = allow_private
         self.timeout = timeout
 
-    def _clean(self, name: str, url: str, exclude_id: Optional[int] = None) -> tuple[str, str]:
+    def _clean(
+        self, name: str, url: str, source_type: Optional[str] = None,
+        alert_topic: Optional[str] = None, exclude_id: Optional[int] = None,
+    ) -> tuple[str, str, str, Optional[str]]:
         name = validate_name(name)
+        source_type = validate_source_type(source_type)
+        topic = validate_alert_topic(alert_topic, source_type)
         url = validate_feed_url(url, self.allow_private)
         if self.repo.name_exists(name, exclude_id):
             raise ValidationError("A source with that name already exists.")
-        return name, url
+        return name, url, source_type, topic
 
-    def add(self, name: str, url: str) -> int:
-        name, url = self._clean(name, url)
+    def add(
+        self, name: str, url: str, source_type: str = SOURCE_RSS, alert_topic: Optional[str] = None
+    ) -> int:
+        name, url, source_type, topic = self._clean(name, url, source_type, alert_topic)
         try:
-            return self.repo.add(name, url, _now())
+            return self.repo.add(name, url, _now(), True, source_type, topic)
         except sqlite3.IntegrityError:
             raise ValidationError("That feed URL is already configured.")
 
-    def update(self, source_id: int, name: str, url: str) -> None:
-        if self.repo.get(source_id) is None:
+    def update(
+        self, source_id: int, name: str, url: str,
+        source_type: Optional[str] = None, alert_topic: Optional[str] = None,
+    ) -> None:
+        """Edit a source. Leaving source_type or alert_topic as None keeps the stored value."""
+        current = self.repo.get(source_id)
+        if current is None:
             raise ValidationError("That source no longer exists.")
-        name, url = self._clean(name, url, exclude_id=source_id)
+        if source_type is None:
+            source_type = current["source_type"]
+        if alert_topic is None:
+            alert_topic = current["alert_topic"]
+        name, url, source_type, topic = self._clean(name, url, source_type, alert_topic, exclude_id=source_id)
         try:
-            self.repo.update(source_id, name, url)
+            self.repo.update(source_id, name, url, source_type, topic)
         except sqlite3.IntegrityError:
             raise ValidationError("That feed URL is already configured.")
 

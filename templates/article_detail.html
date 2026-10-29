@@ -6,7 +6,11 @@
 <article class="card">
   <h1>{{ article.title }}</h1>
   <dl class="details">
-    <dt>Publisher</dt><dd>{{ article.source }}</dd>
+    <dt>Publisher</dt><dd>{% if article.publisher %}{{ article.publisher }}{% elif only_alerts %}Not identified in the alert{% else %}{{ article.source }}{% endif %}</dd>
+    <dt>Found by</dt><dd>
+      {% for s in found_by %}<div>{{ s.source_name }}{% if s.source_type == 'google_alert' %} <span class="badge">Google Alert</span>{% if s.alert_topic %} <span class="muted small">topic: {{ s.alert_topic }}</span>{% endif %}{% endif %}
+        <span class="muted small">first seen {{ s.first_seen_at|dt }}</span></div>{% endfor %}
+    </dd>
     <dt>Category</dt><dd><span class="badge">{{ article.category }}</span> <span class="muted small">keyword based, may be wrong</span></dd>
     <dt>Published</dt><dd>{{ article.published_at|dt('Not provided by the source') }}</dd>
     <dt>First collected</dt><dd>{{ article.collected_at|dt }}</dd>

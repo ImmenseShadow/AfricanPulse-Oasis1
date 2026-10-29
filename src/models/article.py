@@ -19,6 +19,10 @@ CATEGORIES = (
 
 STATUSES = ("New", "Under Review", "Selected for Content", "Archived")
 
+SOURCE_RSS = "rss"
+SOURCE_GOOGLE_ALERT = "google_alert"
+SOURCE_TYPES = {SOURCE_RSS: "RSS / Atom feed", SOURCE_GOOGLE_ALERT: "Google Alerts feed"}
+
 
 @dataclass
 class Article:
@@ -36,3 +40,5 @@ class Article:
     notes: str = ""
     last_seen_at: Optional[str] = None
     id: Optional[int] = None
+    publisher: Optional[str] = None     # only set when the feed or link identifies one
+    alert_topic: Optional[str] = None   # Google Alert topic that discovered the article

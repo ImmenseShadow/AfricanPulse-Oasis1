@@ -6,6 +6,15 @@ from src.services.source_service import ValidationError
 bp = Blueprint("sources", __name__)
 
 
+def _fields():
+    return (request.form.get("name", ""), request.form.get("url", ""),
+            request.form.get("source_type", "rss"), request.form.get("alert_topic", ""))
+
+
+def _form(name, url, source_type, topic):
+    return {"name": name, "url": url, "source_type": source_type, "alert_topic": topic}
+
+
 def _render(form=None):
     return render_template("sources.html", sources=deps.source_repo().list_sources(), form=form or {})
 
@@ -17,25 +26,25 @@ def index():
 
 @bp.post("/sources")
 def add():
-    name, url = request.form.get("name", ""), request.form.get("url", "")
+    name, url, source_type, topic = _fields()
     try:
-        deps.source_service().add(name, url)
+        deps.source_service().add(name, url, source_type, topic)
     except ValidationError as exc:
         flash(str(exc), "error")
-        return _render({"name": name, "url": url}), 400
+        return _render(_form(name, url, source_type, topic)), 400
     flash("Source added.", "success")
     return redirect(url_for("sources.index"))
 
 
 @bp.post("/sources/test")
 def test_url():
-    name, url = request.form.get("name", ""), request.form.get("url", "")
+    name, url, source_type, topic = _fields()
     try:
         count = deps.source_service().test(url)
         flash(f"Feed reachable and readable: {count} entries found. It has not been saved yet.", "success")
     except ValidationError as exc:
         flash(f"Feed test failed: {exc}", "error")
-    return _render({"name": name, "url": url})
+    return _render(_form(name, url, source_type, topic))
 
 
 @bp.get("/sources/<int:source_id>/edit")
@@ -48,15 +57,16 @@ def edit(source_id: int):
 
 @bp.post("/sources/<int:source_id>/edit")
 def update(source_id: int):
-    name, url = request.form.get("name", ""), request.form.get("url", "")
+    name, url, source_type, topic = _fields()
     source = deps.source_repo().get(source_id)
     if source is None:
         abort(404, description="That source was not found.")
     try:
-        deps.source_service().update(source_id, name, url)
+        deps.source_service().update(source_id, name, url, source_type, topic)
     except ValidationError as exc:
         flash(str(exc), "error")
-        return render_template("source_edit.html", source=source, form={"name": name, "url": url}), 400
+        return render_template(
+            "source_edit.html", source=source, form=_form(name, url, source_type, topic)), 400
     flash("Source updated.", "success")
     return redirect(url_for("sources.index"))
 

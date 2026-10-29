@@ -4,7 +4,8 @@
 <article class="card article">
   <h3 class="article-title"><a href="{{ url_for('articles.detail', article_id=a.id) }}">{{ a.title }}</a></h3>
   <p class="meta">
-    <span>{{ a.source }}</span>
+    <span>{{ a.publisher or a.source }}</span>
+    {% if a.alert_topic %}<span class="badge" title="Discovered by a Google Alert">Alert: {{ a.alert_topic }}</span>{% endif %}
     <span class="badge">{{ a.category }}</span>
     {% if a.status != 'New' %}<span class="badge badge-gold">{{ a.status }}</span>{% endif %}
   </p>

@@ -26,6 +26,10 @@ class SourceResult:
     duplicates: int = 0  # repeated inside the same feed
     invalid: int = 0     # missing title or usable link
     error: Optional[str] = None
+    source_id: Optional[int] = None
+    source_type: str = "rss"
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
 
     @property
     def ok(self) -> bool:
@@ -65,22 +69,29 @@ class NewsService:
 
     def _collect_one(self, source: FeedSource) -> SourceResult:
         when = self._now()
-        result = SourceResult(source.name)
+        result = SourceResult(
+            source.name, source_id=source.source_id, source_type=source.source_type,
+            started_at=when.isoformat(timespec="seconds"),
+        )
         try:
             raw_entries = self._fetch(source.feed_url)
             result.fetched = len(raw_entries)
-            articles, skipped = process_entries(raw_entries, source.name, when)
+            articles, skipped = process_entries(
+                raw_entries, source.name, when, source.source_type, source.alert_topic
+            )
             result.duplicates = sum(1 for r in skipped if r.startswith("duplicate"))
             result.invalid = len(skipped) - result.duplicates
             for article in articles:
-                if self.articles.upsert(article) == "inserted":
+                if self.articles.upsert(article, source) == "inserted":
                     result.inserted += 1
                 else:
                     result.updated += 1
         except CollectorError as exc:
             result.error = str(exc)
-        except Exception:  # keep the run alive; details go to the server log only
-            log.exception("Unexpected error while collecting %s", source.name)
+        except Exception as exc:  # keep the run alive
+            # Only the exception type is logged: its text can contain the feed URL and its token.
+            log.error("Unexpected %s while collecting %s", type(exc).__name__, source.name)
             result.error = "Unexpected error while processing this feed."
-        self.sources.record_result(source.feed_url, when.isoformat(timespec="seconds"), result.error)
+        result.finished_at = self._stamp()
+        self.sources.record_result(source.feed_url, result.finished_at, result.error)
         return result

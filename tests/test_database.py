@@ -114,4 +114,9 @@ class MigrationTests(unittest.TestCase):
                 source = dict(c.execute("SELECT * FROM sources").fetchone())
                 self.assertEqual((source["name"], source["enabled"], source["last_status"]), ("Old Feed", 1, "ok"))
                 self.assertEqual(c.execute("SELECT title FROM articles").fetchone()[0], "Kept")
-                self.assertEqual(c.execute("PRAGMA user_version").fetchone()[0], 2)
+                self.assertEqual(c.execute("PRAGMA user_version").fetchone()[0], 3)
+                # Increment 2 additions: defaults for old rows and a source reference per article
+                self.assertEqual((source["source_type"], source["alert_topic"]), ("rss", None))
+                ref = dict(c.execute("SELECT * FROM article_sources").fetchone())
+                self.assertEqual((ref["source_name"], ref["source_type"], ref["source_id"]), ("Old Feed", "rss", source["id"]))
+                self.assertEqual(c.execute("SELECT COUNT(*) FROM article_sources").fetchone()[0], 1)

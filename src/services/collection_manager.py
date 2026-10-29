@@ -35,7 +35,10 @@ class CollectionManager:
             rows = [r for r in SourceRepository(self.db).list_sources() if r["enabled"]]
             if not rows:
                 return None, "There are no enabled sources. Add or enable one on the Data Sources page."
-            sources = [FeedSource(r["name"], r["feed_url"], True) for r in rows]
+            sources = [
+                FeedSource(r["name"], r["feed_url"], True, r["source_type"], r["alert_topic"], r["id"])
+                for r in rows
+            ]
             now = datetime.now(timezone.utc).isoformat(timespec="seconds")
             run_id = self.runs.start_run(now, trigger, len(sources))
             fetch = partial(self._fetch, timeout=self._timeout())

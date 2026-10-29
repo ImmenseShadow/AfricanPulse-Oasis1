@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from src.models.article import STATUSES, Article
+from config.settings import FeedSource
+from src.models.article import SOURCE_GOOGLE_ALERT, STATUSES, Article
 from src.storage.database import Database
 
 SORT_COLUMNS = {"published_at", "collected_at"}
@@ -27,6 +28,8 @@ def _row_to_article(row) -> Article:
         category=row["category"],
         status=row["status"],
         notes=row["notes"],
+        publisher=row["publisher"],
+        alert_topic=row["alert_topic"],
     )
 
 
@@ -34,45 +37,81 @@ class ArticleRepository:
     def __init__(self, db: Database):
         self.db = db
 
-    def upsert(self, article: Article) -> str:
+    def upsert(self, article: Article, source: Optional[FeedSource] = None) -> str:
         """Insert a new article or refresh an existing one.
 
         Returns "inserted" or "updated". Updates keep the first collection time
-        and never touch the editorial status or notes.
+        and never touch the editorial status or notes. When a Google Alert finds an article that
+        is already stored, the stored record is preserved (only last-seen time and missing
+        publisher or topic are filled in) and the alert is added as another source reference.
         """
+        seen_at = article.last_seen_at or article.collected_at
+        ref = source or FeedSource(article.source, "")
         with self.db.connect() as conn:
             existing = conn.execute(
                 "SELECT id FROM articles WHERE dedupe_key = ?", (article.dedupe_key,)
             ).fetchone()
             if existing is None:
-                conn.execute(
+                article_id = conn.execute(
                     """INSERT INTO articles
                        (dedupe_key, title, source, url, published_at, collected_at,
-                        last_seen_at, summary, category, status, notes)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        last_seen_at, summary, category, status, notes, publisher, alert_topic)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         article.dedupe_key, article.title, article.source, article.url,
-                        article.published_at, article.collected_at,
-                        article.last_seen_at or article.collected_at, article.summary,
+                        article.published_at, article.collected_at, seen_at, article.summary,
                         article.category, article.status, article.notes,
+                        article.publisher, article.alert_topic,
                     ),
-                )
-                return "inserted"
+                ).lastrowid
+                outcome = "inserted"
+            else:
+                article_id = existing["id"]
+                if ref.source_type == SOURCE_GOOGLE_ALERT:
+                    conn.execute(
+                        """UPDATE articles SET last_seen_at = ?,
+                               publisher = COALESCE(publisher, ?),
+                               alert_topic = COALESCE(alert_topic, ?)
+                           WHERE id = ?""",
+                        (seen_at, article.publisher, article.alert_topic, article_id),
+                    )
+                else:
+                    conn.execute(
+                        """UPDATE articles SET
+                               title = ?,
+                               published_at = COALESCE(?, published_at),
+                               summary = COALESCE(?, summary),
+                               category = ?,
+                               last_seen_at = ?
+                           WHERE id = ?""",
+                        (article.title, article.published_at, article.summary,
+                         article.category, seen_at, article_id),
+                    )
+                outcome = "updated"
             conn.execute(
-                """UPDATE articles SET
-                       title = ?,
-                       published_at = COALESCE(?, published_at),
-                       summary = COALESCE(?, summary),
-                       category = ?,
-                       last_seen_at = ?
-                   WHERE dedupe_key = ?""",
-                (
-                    article.title, article.published_at, article.summary,
-                    article.category, article.last_seen_at or article.collected_at,
-                    article.dedupe_key,
-                ),
+                """INSERT INTO article_sources
+                       (article_id, source_id, source_name, source_type, alert_topic,
+                        first_seen_at, last_seen_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT (article_id, source_name) DO UPDATE SET
+                       source_id = COALESCE(excluded.source_id, source_id),
+                       source_type = excluded.source_type,
+                       alert_topic = COALESCE(excluded.alert_topic, alert_topic),
+                       last_seen_at = excluded.last_seen_at""",
+                (article_id, ref.source_id, ref.name, ref.source_type,
+                 ref.alert_topic if ref.source_type == SOURCE_GOOGLE_ALERT else None,
+                 seen_at, seen_at),
             )
-            return "updated"
+            return outcome
+
+    def sources_for(self, article_id: int) -> list[dict]:
+        """Every source that has found this article, oldest first."""
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM article_sources WHERE article_id = ? ORDER BY first_seen_at, id",
+                (article_id,),
+            ).fetchall()
+        return [dict(r) for r in rows]
 
     @staticmethod
     def _filters(category, source, status, query) -> tuple[str, list]:

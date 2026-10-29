@@ -24,10 +24,12 @@ class CollectionRepository:
         with self.db.connect() as conn:
             conn.execute(
                 "INSERT INTO collection_run_sources "
-                "(run_id, source_name, ok, fetched, inserted, duplicates, invalid, error) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "(run_id, source_name, ok, fetched, inserted, duplicates, invalid, error, "
+                "source_id, source_type, started_at, finished_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (run_id, result.source_name, int(result.ok), result.fetched, result.inserted,
-                 result.updated + result.duplicates, result.invalid, result.error),
+                 result.updated + result.duplicates, result.invalid, result.error,
+                 result.source_id, result.source_type, result.started_at, result.finished_at),
             )
 
     def finish_run(self, run_id: int, finished_at: str, results: list) -> str:

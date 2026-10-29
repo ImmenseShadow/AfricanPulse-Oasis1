@@ -6,6 +6,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SOURCES_FILE = PROJECT_ROOT / "config" / "news_sources.json"
@@ -26,6 +27,9 @@ class FeedSource:
     name: str
     feed_url: str
     enabled: bool = True
+    source_type: str = "rss"           # "rss" or "google_alert"
+    alert_topic: Optional[str] = None
+    source_id: Optional[int] = None
 
 
 def default_data_dir() -> Path:

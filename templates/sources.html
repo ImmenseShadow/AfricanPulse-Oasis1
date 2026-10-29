@@ -3,7 +3,8 @@
 {% block title %}Data Sources{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Data Sources</h1>
-<p class="muted">RSS and Atom feeds the collector reads. Saving a feed does not prove it works; use Test.</p></div></div>
+<p class="muted">RSS, Atom and Google Alerts feeds the collector reads. Saving a feed does not prove it works; use Test.
+For a Google Alert, paste the alert's RSS feed URL, choose <em>Google Alerts feed</em> and enter its topic. Not every alert offers RSS delivery.</p></div></div>
 
 <section class="card">
   <h2>Add a source</h2>
@@ -11,6 +12,12 @@
     {{ csrf_input() }}
     <div class="field"><label for="name">Name</label>
       <input id="name" name="name" value="{{ form.get('name', '') }}" maxlength="80" required></div>
+    <div class="field"><label for="source_type">Source type</label>
+      <select id="source_type" name="source_type">
+        {% for key, label in SOURCE_TYPES.items() %}<option value="{{ key }}"{% if key == form.get('source_type', 'rss') %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="alert_topic">Alert topic <span class="muted small">(required for Google Alerts: the search terms the alert follows)</span></label>
+      <input id="alert_topic" name="alert_topic" value="{{ form.get('alert_topic', '') }}" maxlength="120" placeholder="e.g. African education scholarships"></div>
     <div class="field"><label for="url">Feed URL</label>
       <input id="url" name="url" type="url" value="{{ form.get('url', '') }}" maxlength="2048" required placeholder="https://example.com/feed.xml"></div>
     <div class="actions">
@@ -25,12 +32,13 @@
   {% if sources %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Name</th><th>Feed URL</th><th>State</th><th>Latest collection</th><th>Actions</th></tr></thead>
+    <thead><tr><th>Name</th><th>Type and topic</th><th>Feed URL</th><th>State</th><th>Latest collection</th><th>Actions</th></tr></thead>
     <tbody>
     {% for s in sources %}
       <tr>
         <td data-label="Name">{{ s.name }}</td>
-        <td data-label="Feed URL" class="url-cell">{{ s.feed_url }}</td>
+        <td data-label="Type and topic">{{ SOURCE_TYPES.get(s.source_type, s.source_type) }}{% if s.alert_topic %}<br><span class="muted small">Topic: {{ s.alert_topic }}</span>{% endif %}</td>
+        <td data-label="Feed URL" class="url-cell">{% if s.source_type == 'google_alert' %}{{ s.feed_url|mask_url }}{% else %}{{ s.feed_url }}{% endif %}</td>
         <td data-label="State">{% if s.enabled %}<span class="badge badge-completed">Enabled</span>{% else %}<span class="badge">Disabled</span>{% endif %}</td>
         <td data-label="Latest collection">
           {% if s.last_status == 'ok' %}<span class="badge badge-completed">OK</span> {{ s.last_fetched_at|dt }}

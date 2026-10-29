@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from functools import partial
 from typing import Optional
 
 from flask import Flask, render_template, request, url_for
@@ -12,11 +13,13 @@ from config.settings import (
     PROJECT_ROOT, allow_private_feeds, get_database_path, load_or_create_secret_key, load_sources, ConfigError,
 )
 from src.collectors.rss_collector import fetch_feed
+from src.models.article import SOURCE_TYPES
 from src.security import init_security
 from src.services.collection_manager import CollectionManager
 from src.storage.collection_repository import CollectionRepository
 from src.storage.database import Database
 from src.storage.settings_repository import SettingsRepository
+from src.url_safety import mask_url
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +60,8 @@ def create_app(config: Optional[dict] = None) -> Flask:
     app.config.update(config or {})
     if not app.config["SECRET_KEY"]:
         app.config["SECRET_KEY"] = load_or_create_secret_key()
+    if app.config["FETCH_FEED"] is fetch_feed:  # the real collector honours the private feed switch
+        app.config["FETCH_FEED"] = partial(fetch_feed, allow_private=app.config["ALLOW_PRIVATE_FEEDS"])
 
     db = Database(app.config["DATABASE_PATH"])
     db.initialize()
@@ -78,6 +83,8 @@ def create_app(config: Optional[dict] = None) -> Flask:
         request.endpoint, **{**request.args.to_dict(), "page": page}
     )
     app.jinja_env.filters["dt"] = fmt_dt
+    app.jinja_env.filters["mask_url"] = mask_url
+    app.jinja_env.globals["SOURCE_TYPES"] = SOURCE_TYPES
     app.jinja_env.filters["run_status"] = lambda s: STATUS_LABELS.get(s, s)
 
     from src.routes import activity, articles, dashboard, settings, sources
