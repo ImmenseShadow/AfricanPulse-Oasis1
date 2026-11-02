@@ -19,7 +19,7 @@
       <nav class="main-nav" aria-label="Main">
         {% set bp = request.blueprint %}
         <a href="{{ url_for('dashboard.index') }}"{% if bp == 'dashboard' %} aria-current="page"{% endif %}>Dashboard</a>
-        <details class="nav-group"{% if bp in ('articles', 'sources', 'activity') %} open{% endif %}>
+        <details class="nav-group">
           <summary{% if bp in ('articles', 'sources', 'activity') %} aria-current="page"{% endif %}>News</summary>
           <div class="nav-menu">
             <a href="{{ url_for('articles.list_articles') }}"{% if bp == 'articles' %} aria-current="page"{% endif %}>News Feed</a>

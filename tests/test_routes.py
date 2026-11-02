@@ -2,12 +2,14 @@ import tempfile
 import threading
 import time
 import unittest
+import sqlite3
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import urlencode
 
 from src.app import create_app
 from src.collectors.rss_collector import CollectorError, parse_feed
-from src.models.article import ROLE_EDITOR, ROLE_VIEWER
+from src.models.article import ROLE_EDITOR, ROLE_VIEWER, STATUSES
 from src.routes.dashboard import _chart_segments
 from src.storage.article_repository import ArticleRepository
 from src.storage.collection_repository import CollectionRepository
@@ -67,6 +69,21 @@ class PageTests(WebTestCase):
         res = self.client.get("/nope")
         self.assertEqual(res.status_code, 404)
         self.assertNotIn(b"Traceback", res.data)
+
+    def test_activity_page_does_not_auto_open_news_dropdown(self):
+        response = self.client.get("/activity")
+        html = response.data.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('<summary aria-current="page">News</summary>', html)
+        self.assertNotIn('<details class="nav-group" open', html)
+
+    def test_collection_error_does_not_auto_open_news_dropdown(self):
+        response = self.post("/collect", follow_redirects=True)
+        html = response.data.decode()
+
+        self.assertIn("There are no enabled sources", html)
+        self.assertNotIn('<details class="nav-group" open', html)
 
     def test_security_headers(self):
         res = self.client.get("/")
@@ -542,6 +559,55 @@ class EditorialAssignmentTests(WebTestCase):
             if rule.rule == "/articles/<int:article_id>/editorial" and "POST" in rule.methods
         ]
         self.assertEqual(len(matching_routes), 1)
+
+
+class EditorialStageRouteTests(WebTestCase):
+    def setUp(self):
+        super().setUp()
+        user_id = UserRepository(self.db).create_user("stage-editor", "test-password", ROLE_EDITOR)
+        with self.client.session_transaction() as session:
+            session["user_id"] = user_id
+        for index, status in enumerate(STATUSES[:-1]):
+            article = make_article(
+                title=f"Article for {status}",
+                link=f"https://example.com/stages/{index}",
+            )
+            self.repo.upsert(article)
+            stored = self.repo.search(query=article.title)[0]
+            self.repo.update_editorial(stored.id, status, "")
+
+    def test_every_configured_stage_opens_and_filters_its_articles(self):
+        for status in STATUSES[:-1]:
+            response = self.client.get("/editorial?" + urlencode({"status": status}))
+            self.assertEqual(response.status_code, 200, status)
+            self.assertIn(f"Article for {status}".encode(), response.data, status)
+
+    def test_review_shorthand_opens_under_review_stage(self):
+        response = self.client.get("/editorial?status=Review")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Article for Under Review", response.data)
+        self.assertNotIn(b"Article for New", response.data)
+
+    def test_empty_configured_stage_has_an_empty_state(self):
+        response = self.client.get("/editorial?status=Selected+for+Content")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"No articles currently assigned to this stage.", response.data)
+
+    def test_unknown_stage_returns_controlled_not_found(self):
+        response = self.client.get("/editorial?status=not-a-stage")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn(b"Traceback", response.data)
+
+    def test_database_query_failure_returns_safe_service_error(self):
+        with patch("src.routes.editorial.deps.articles", side_effect=sqlite3.OperationalError("private query detail")):
+            response = self.client.get("/editorial?status=New")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn(b"Editorial stages are temporarily unavailable", response.data)
+        self.assertNotIn(b"private query detail", response.data)
 
 
 class SettingsRouteTests(WebTestCase):

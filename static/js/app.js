@@ -113,6 +113,28 @@ document.addEventListener("submit", function (event) {
         closeOthers(group);
       }
     });
+
+    group.addEventListener("mouseenter", function () {
+      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        group.open = true;
+        group.dataset.hoverOpened = "true";
+        closeOthers(group);
+      }
+    });
+
+    group.addEventListener("mouseleave", function () {
+      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        closeGroup(group);
+        delete group.dataset.hoverOpened;
+      }
+    });
+
+    group.querySelector("summary").addEventListener("click", function (event) {
+      if (event.detail > 0 && group.dataset.hoverOpened === "true") {
+        event.preventDefault();
+        delete group.dataset.hoverOpened;
+      }
+    });
   });
 
   document.addEventListener("click", function (event) {
@@ -140,7 +162,11 @@ document.addEventListener("submit", function (event) {
     if (event.key !== "Escape") {
       return;
     }
+    var activeGroup = groups.find(function (group) { return group.open; });
     groups.forEach(closeGroup);
+    if (activeGroup) {
+      activeGroup.querySelector("summary").focus();
+    }
   });
 })();
 

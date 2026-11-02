@@ -14,7 +14,9 @@
   </div>
   <div class="field actions-field"><button class="btn btn-primary" type="submit">Apply</button></div>
 </form>
-{% if articles %}
+{% if error_message %}
+  <div class="card flash flash-error" role="alert"><p>{{ error_message }}</p></div>
+{% elif articles %}
   <div class="card-list">
     {% for article in articles %}
       <article class="card article-card">
@@ -24,6 +26,6 @@
     {% endfor %}
   </div>
 {% else %}
-  <div class="card empty"><h3>No articles found</h3><p>There are no articles matching the current editorial review filters.</p></div>
+  <div class="card empty"><h3>No articles found</h3><p>{% if current_status %}No articles currently assigned to this stage.{% else %}There are no articles matching the current editorial review filters.{% endif %}</p></div>
 {% endif %}
 {% endblock %}
