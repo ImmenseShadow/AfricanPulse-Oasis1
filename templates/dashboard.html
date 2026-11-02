@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import csrf_input, article_item %}
-{% block title %}Overview{% endblock %}
+{% block title %}Dashboard{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Overview</h1>
+    <h1>Dashboard</h1>
     <p class="muted">The current state of the collection system, read from the database.</p>
   </div>
   <form method="post" action="{{ url_for('dashboard.collect') }}" class="inline-form">
@@ -23,9 +23,16 @@
 
 <section class="stat-grid" aria-label="Statistics">
   <div class="card stat"><span class="stat-value">{{ stats.total }}</span><span class="stat-label">Collected articles</span></div>
+  <div class="card stat"><span class="stat-value">{{ awaiting_review }}</span><span class="stat-label">Awaiting review</span></div>
   <div class="card stat"><span class="stat-value">{{ configured }}</span><span class="stat-label">Configured sources ({{ enabled }} enabled)</span></div>
-  <div class="card stat"><span class="stat-value">{{ stats.sources }}</span><span class="stat-label">Sources with stored articles</span></div>
   <div class="card stat"><span class="stat-value">{{ recent_count }}</span><span class="stat-label">New in the last 24 hours</span></div>
+</section>
+
+<section class="workspace-actions" aria-label="Quick actions">
+  <a class="btn btn-ghost" href="{{ url_for('articles.list_articles') }}">Browse news</a>
+  <a class="btn btn-ghost" href="{{ url_for('sources.index') }}">Manage sources</a>
+  <a class="btn btn-ghost" href="{{ url_for('calendar.create', kind='event') }}">Create event</a>
+  <a class="btn btn-ghost" href="{{ url_for('calendar.create', kind='schedule') }}">Create schedule</a>
 </section>
 
 <div class="two-col">
@@ -57,6 +64,19 @@
       <p class="muted small">Categories are assigned by simple keyword rules, not AI. Unclear articles stay Uncategorized.</p>
     {% else %}
       <p class="muted">No articles to count yet.</p>
+    {% endif %}
+  </section>
+  <section class="card">
+    <div class="section-title"><h2>Coming up</h2><a href="{{ url_for('calendar.index', view='agenda') }}">Open calendar</a></div>
+    {% if upcoming_items %}
+      <ul class="upcoming-list">
+      {% for item in upcoming_items %}
+        <li><a href="{{ url_for('calendar.detail', item_id=item.id) }}"><time>{{ item.start_at|replace('T', ' ') }}</time><strong>{{ item.title }}</strong><span class="muted">{{ item.kind|capitalize }} · {{ item.category }}</span></a></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No upcoming events or schedules.</p>
+      <a class="btn btn-small" href="{{ url_for('calendar.create') }}">Add to calendar</a>
     {% endif %}
   </section>
 </div>

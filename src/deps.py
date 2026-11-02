@@ -6,6 +6,7 @@ from flask import current_app
 from src.services.settings_service import SettingsService
 from src.services.source_service import SourceService
 from src.storage.article_repository import ArticleRepository
+from src.storage.calendar_repository import CalendarRepository
 from src.storage.collection_repository import CollectionRepository
 from src.storage.settings_repository import SettingsRepository
 from src.storage.source_repository import SourceRepository
@@ -17,6 +18,10 @@ def db():
 
 def articles() -> ArticleRepository:
     return ArticleRepository(db())
+
+
+def calendar() -> CalendarRepository:
+    return CalendarRepository(db())
 
 
 def runs() -> CollectionRepository:

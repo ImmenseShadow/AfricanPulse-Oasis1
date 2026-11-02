@@ -27,11 +27,20 @@ Add keywords to `RULES` in `src/processors/categorizer.py` (new categories also 
 
 ## Add a page
 
-Create a blueprint in `src/routes/`, register it in `src/app.py`, add a template that extends `base.html`, and add forms with `{{ csrf_input() }}`. Do not add inline scripts or styles.
+Create a blueprint in `src/routes/`, register it in `src/app.py`, add a template that extends `base.html`, and add forms with `{{ csrf_input() }}`. Keep database operations in repositories. Do not add inline scripts or styles.
 
 ## Change the schema
 
-Add the table or column to `SCHEMA` and a guarded step in `Database._migrate`, bump `SCHEMA_VERSION`, and add a migration test using an old style database.
+## Calendar data
+
+Events and schedules share `calendar_items` and `CalendarRepository`; `kind` distinguishes an event
+from a communications schedule. Validate all submitted values in `src/routes/calendar.py` as well
+as in the form. Calendar views query overlapping date ranges. Reminder intervals are stored only,
+and recurrence is intentionally not exposed until it can be implemented end-to-end.
+
+## Change the schema
+
+Add the table or column to `SCHEMA` and a guarded step in `Database._migrate` when needed, bump `SCHEMA_VERSION`, and add a migration test using an old style database. Migrations must remain additive and must not drop user data.
 
 ## Git and GitHub
 

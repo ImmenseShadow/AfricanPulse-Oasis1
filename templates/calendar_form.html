@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}{{ 'Edit' if item_id else 'Create' }} calendar item{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">Calendar</p><h1>{{ 'Edit calendar item' if item_id else 'Create an event or schedule' }}</h1></div>
+  <a class="btn btn-ghost" href="{{ url_for('calendar.index') }}">Cancel</a>
+</div>
+<form class="card calendar-form" method="post" action="{{ url_for('calendar.edit', item_id=item_id) if item_id else url_for('calendar.create') }}">
+  {{ csrf_input() }}
+  <div class="form-grid">
+    <div class="field"><label for="kind">Item type</label><select id="kind" name="kind"><option value="event"{% if form.kind == 'event' %} selected{% endif %}>Event</option><option value="schedule"{% if form.kind == 'schedule' %} selected{% endif %}>Schedule</option></select></div>
+    <div class="field"><label for="title">Title</label><input id="title" name="title" maxlength="160" required value="{{ form.title }}"></div>
+    <div class="field"><label for="start_at">Starts</label><input id="start_at" name="start_at" type="datetime-local" required value="{{ form.start_at }}"></div>
+    <div class="field"><label for="end_at">Ends</label><input id="end_at" name="end_at" type="datetime-local" required value="{{ form.end_at }}"></div>
+    <div class="field checkbox-field"><label><input type="checkbox" name="all_day" value="1"{% if form.all_day %} checked{% endif %}> All-day</label></div>
+    <div class="field"><label for="location">Location <span class="muted">(optional)</span></label><input id="location" name="location" maxlength="200" value="{{ form.location }}"></div>
+    <div class="field"><label for="category">Category</label><select id="category" name="category">{% for category in categories %}<option{% if form.category == category %} selected{% endif %}>{{ category }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="color">Calendar label</label><select id="color" name="color">{% for color in colors %}<option value="{{ color }}"{% if form.color == color %} selected{% endif %}>{{ color|capitalize }}</option>{% endfor %}</select></div>
+    {% if form.kind == 'schedule' %}
+    <div class="field"><label for="status">Status</label><select id="status" name="status">{% for status in statuses %}<option value="{{ status }}"{% if form.status == status %} selected{% endif %}>{{ status_labels[status] }}</option>{% endfor %}</select></div>
+    {% else %}<input type="hidden" name="status" value="{{ form.status }}">{% endif %}
+    <div class="field"><label for="reminder_minutes">Reminder</label><select id="reminder_minutes" name="reminder_minutes">{% for value, label in (('', 'No reminder'), ('0', 'At start time'), ('5', '5 minutes before'), ('15', '15 minutes before'), ('30', '30 minutes before'), ('60', '1 hour before'), ('1440', '1 day before')) %}<option value="{{ value }}"{% if form.reminder_minutes|string == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select><small class="muted">Reminder preferences are saved; delivery is not configured.</small></div>
+    <div class="field form-wide"><label for="description">Description</label><textarea id="description" name="description" rows="3" maxlength="4000">{{ form.description }}</textarea></div>
+    <div class="field form-wide"><label for="notes">Notes</label><textarea id="notes" name="notes" rows="3" maxlength="4000">{{ form.notes }}</textarea></div>
+  </div>
+  <div class="actions"><button class="btn btn-primary" type="submit">{{ 'Save changes' if item_id else 'Save calendar item' }}</button><a class="btn btn-ghost" href="{{ url_for('calendar.index') }}">Cancel</a></div>
+</form>
+{% endblock %}

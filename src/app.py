@@ -87,9 +87,9 @@ def create_app(config: Optional[dict] = None) -> Flask:
     app.jinja_env.globals["SOURCE_TYPES"] = SOURCE_TYPES
     app.jinja_env.filters["run_status"] = lambda s: STATUS_LABELS.get(s, s)
 
-    from src.routes import activity, articles, dashboard, settings, sources
+    from src.routes import activity, articles, calendar, dashboard, settings, sources
 
-    for module in (dashboard, articles, sources, activity, settings):
+    for module in (dashboard, articles, sources, activity, calendar, settings):
         app.register_blueprint(module.bp)
 
     @app.errorhandler(HTTPException)

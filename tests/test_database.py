@@ -114,7 +114,10 @@ class MigrationTests(unittest.TestCase):
                 source = dict(c.execute("SELECT * FROM sources").fetchone())
                 self.assertEqual((source["name"], source["enabled"], source["last_status"]), ("Old Feed", 1, "ok"))
                 self.assertEqual(c.execute("SELECT title FROM articles").fetchone()[0], "Kept")
-                self.assertEqual(c.execute("PRAGMA user_version").fetchone()[0], 3)
+                self.assertEqual(c.execute("PRAGMA user_version").fetchone()[0], 4)
+                self.assertIsNotNone(c.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='calendar_items'"
+                ).fetchone())
                 # Increment 2 additions: defaults for old rows and a source reference per article
                 self.assertEqual((source["source_type"], source["alert_topic"]), ("rss", None))
                 ref = dict(c.execute("SELECT * FROM article_sources").fetchone())

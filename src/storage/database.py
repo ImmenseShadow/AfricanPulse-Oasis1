@@ -8,7 +8,7 @@ from typing import Iterator
 
 from src.models.article import STATUSES
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _STATUS_LIST = ", ".join(f"'{s}'" for s in STATUSES)
 
 SCHEMA = f"""
@@ -98,6 +98,27 @@ CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS calendar_items (
+    id INTEGER PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('event', 'schedule')),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    start_at TEXT NOT NULL,
+    end_at TEXT NOT NULL,
+    all_day INTEGER NOT NULL DEFAULT 0,
+    location TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT 'Other',
+    color TEXT NOT NULL DEFAULT 'green',
+    status TEXT NOT NULL DEFAULT 'planned'
+        CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
+    notes TEXT NOT NULL DEFAULT '',
+    reminder_minutes INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_calendar_items_start ON calendar_items(start_at);
+CREATE INDEX IF NOT EXISTS idx_calendar_items_range ON calendar_items(start_at, end_at);
 """
 
 

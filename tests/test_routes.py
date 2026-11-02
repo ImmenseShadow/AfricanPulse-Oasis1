@@ -49,13 +49,13 @@ class PageTests(WebTestCase):
         expectations = {
             "/": b"Nothing collected yet", "/articles": b"No articles collected yet",
             "/sources": b"No sources configured", "/activity": b"No collection runs yet",
-            "/settings": b"Default article sorting",
+            "/settings": b"Default article sorting", "/calendar": b"Month",
         }
         for url, text in expectations.items():
             res = self.client.get(url)
             self.assertEqual(res.status_code, 200, url)
             self.assertIn(text, res.data, url)
-            for label in (b"Overview", b"Collected News", b"Data Sources", b"Collection Activity", b"Settings"):
+            for label in (b"Dashboard", b"News", b"News Feed", b"Data Sources", b"Collection Activity", b"Calendar", b"Settings"):
                 self.assertIn(label, res.data)
 
     def test_unknown_page_is_a_friendly_404(self):

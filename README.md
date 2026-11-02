@@ -9,7 +9,11 @@ Always open the original source before using any information.
 
 ## What works in this version
 
-* **Overview:** real statistics from the database, latest articles, a Collect news now button
+* **Dashboard:** real collection and review statistics, source configuration, latest articles,
+  collection status, upcoming calendar items and quick actions
+* **News workspace:** a News Feed with search, filtering, sorting and article details; Data Sources
+  for RSS, Atom and Google Alerts; and Collection Activity with per-source results
+* **Calendar workspace:** month, week, day and 30-day agenda views for BOS events and schedules
 * **Collected News:** search titles and summaries, filter by category, source and status, sort by
   publication or collection date, pagination, article detail page with original link
 * **Data Sources:** add, edit, enable or disable, test and remove RSS, Atom or Google Alerts feeds
@@ -18,6 +22,8 @@ Always open the original source before using any information.
 * Editorial status (New, Under Review, Selected for Content, Archived) and BOS notes per article
 * Collection runs in a background thread; one failing feed never stops the others
 * Duplicates are prevented, so collecting twice never creates second copies
+* Events and schedules persist in SQLite and can be created, viewed, edited, status-updated and deleted
+* Calendar item reminders can be saved as preferences; no reminder delivery service is configured
 * **Increment 2: Google Alerts.** A Google Alerts RSS feed is a new source type that uses the same
   collector, processor, database and activity history as every other source (see below)
 
@@ -37,7 +43,8 @@ python run.py
 
 4. Open http://127.0.0.1:5000 in your browser. Stop the site with Ctrl+C.
 
-The database is created automatically on first start. Next time, activate the environment
+The database is created and safely migrated automatically on first start. The schema migration adds
+the calendar table and does not delete or rewrite existing article, source or collection data. Next time, activate the environment
 and run `python run.py`. To use another port: `$env:APOASIS_PORT = "5050"; python run.py`.
 
 If you used the earlier Streamlit version, your existing database is upgraded in place and
@@ -46,7 +53,7 @@ page once.
 
 ## Configure news sources
 
-Open **Data Sources**. Add a name and feed URL, press **Test URL first** if you like, then
+Open **News > Data Sources**. Add a name and feed URL, press **Test URL first** if you like, then
 **Add source**. Use Edit, Disable or Remove to manage existing ones. Saving a feed does not prove
 it works, so check the Latest collection column after collecting. Only http and https URLs are
 accepted. Feeds on localhost or private networks are refused.
@@ -80,8 +87,8 @@ fixed URL pattern: copy whatever address Google gives you.
 **5. Test it.** Press **Test URL first** before saving, or **Test** on a saved source. The test makes a real
 request and reports success only when the address answered and the response was a readable feed.
 
-**6. Collect and view.** Press **Collect news now**. Entries appear under **Collected News** (with an
-`Alert: topic` label) and the run appears under **Collection Activity**, with the source type, start and
+**6. Collect and view.** Press **Collect news now** from the Dashboard. Entries appear under **News > News Feed** (with an
+`Alert: topic` label) and the run appears under **News > Collection Activity**, with the source type, start and
 finish time, entries found, new articles and duplicates for that alert.
 
 You can edit, disable (Disable / Enable) or remove an alert source at any time. Removing a source keeps
@@ -115,14 +122,29 @@ able to change it.
 
 ## Collect news
 
-Press **Collect news now** on Overview or Collection Activity. The page shows progress and
-refreshes when the run ends. Results appear under Collected News and Collection Activity.
+Press **Collect news now** on Dashboard. The page shows progress and refreshes when the run ends.
+Results appear under **News > News Feed** and **News > Collection Activity**.
+
+## Calendar
+
+Open **Calendar** from the main navigation. Month, week, day and agenda views share previous/next
+controls and a Today button. Select a date to open its day view, or use the plus control on a month
+date to create an item for that day. Choose **Event** for BOS events or **Schedule** for communications
+activities such as review meetings, publishing plans and deadlines. Both use the same persistent
+calendar record and support descriptions, dates/times, all-day display, location, category, label,
+notes and a schedule status. Open an item to edit it, update a schedule status or delete it after
+confirmation. The Dashboard lists upcoming events and schedules from the database.
+
+Reminder intervals are stored with each item but are not delivered: this local app has no background
+job, browser notification permission flow or email service. Recurring events are not implemented;
+create separate items for each occurrence until recurrence rules can be supported consistently.
 
 ## Where data is stored
 
 `%LOCALAPPDATA%\AfricanPulseOasis\africanpulse.db`, plus a generated `secret_key` file in the same
 folder used to sign sessions. Neither belongs in Git. Override the database with `APOASIS_DB_PATH`
-(see `.env.example`). Delete the database file to start fresh.
+(see `.env.example`). To try a fresh database, point `APOASIS_DB_PATH` at a new file; keep a backup
+before removing any existing database.
 
 ## Run the tests
 
@@ -144,8 +166,9 @@ See `docs` for the branch and pull request workflow. Run the tests before every 
   and activate again. It affects only that window and needs no administrator rights.
 * **Dependency install fails.** Upgrade pip, confirm `(.venv)` shows in the prompt, check your connection.
 * **Port in use.** Set another port as shown above.
-* **Database errors.** Close other copies of the site, then delete the database file or point
-  `APOASIS_DB_PATH` at a folder you can write to.
+* **Database errors.** Close other copies of the site, check that the database folder is writable,
+  and back up the database before attempting any manual repair. To test with an empty database, set
+  `APOASIS_DB_PATH` to a new file rather than replacing your existing one.
 * **Feeds fail.** Read the error on Data Sources or Collection Activity. Typical causes are no
   internet, a changed feed URL, or a publisher blocking automated requests.
 * **Google Alert: "server answered HTTP 404" or "403".** The copied address is wrong, incomplete or the alert

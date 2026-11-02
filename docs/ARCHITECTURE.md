@@ -5,7 +5,7 @@ Pipeline: sources, collection, processing, validation and deduplication, storage
 ## Layers
 
 * `run.py` starts the Flask app from `src/app.py` (application factory).
-* `src/routes/` has one blueprint per page: dashboard, articles, sources, activity, settings. Routes read forms, call services or repositories, and render templates. No SQL.
+* `src/routes/` has blueprints for dashboard, articles, sources, activity, calendar and settings. Routes read forms, call services or repositories, and render templates. No SQL.
 * `templates/` (Jinja2, autoescaped) and `static/` (CSS with variables, one small JS file).
 * `src/services/`
   * `news_service.py` runs a collection and records the run
@@ -15,7 +15,7 @@ Pipeline: sources, collection, processing, validation and deduplication, storage
 * `src/collectors/rss_collector.py` downloads and parses RSS and Atom. Redirects are followed by hand so every hop is checked by `src/url_safety.py`. Google Alerts feeds use this same collector.
 * `src/url_safety.py` public address check (DNS aware), blocked host names, and `mask_url` for showing feed URLs without tokens.
 * `src/processors/` cleans entries, builds the dedupe key, categorises by keyword. For `google_alert` sources `article_processor.py` also unwraps `google.com/url` links, reads the publisher and keeps only the snippet.
-* `src/storage/` SQLite: `database.py` (schema and migration), plus article, source, collection and settings repositories.
+* `src/storage/` SQLite: `database.py` (schema and migration), plus article, source, collection, calendar and settings repositories.
 * `src/security.py` CSRF tokens and response headers. `src/deps.py` builds services per request.
 * `../config/settings.py` paths, limits, environment overrides, the starting source list.
 
@@ -51,8 +51,12 @@ Decisions:
 ## Database migration
 
 `Database.initialize()` creates missing tables, then adds missing columns to old tables and sets
-`PRAGMA user_version = 3` (existing articles get a first `article_sources` row). It never drops or rewrites data. `news_sources.json` seeds the database
+`PRAGMA user_version = 4` (existing articles get a first `article_sources` row; calendar events and schedules use the additive `calendar_items` table). It never drops or rewrites data. `news_sources.json` seeds the database
 once (tracked by an `app_settings` flag) so a source the user deletes does not reappear.
+
+`calendar_items` stores both `event` and `schedule` kinds with local start/end times, all-day flag,
+category, colour label, schedule status, notes, optional reminder interval and creation/update times.
+Reminder intervals are preferences only; there is no delivery worker. Recurrence is not implemented.
 
 ## Key decisions to preserve
 

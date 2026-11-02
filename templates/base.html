@@ -18,10 +18,16 @@
       </a>
       <nav class="main-nav" aria-label="Main">
         {% set bp = request.blueprint %}
-        <a href="{{ url_for('dashboard.index') }}"{% if bp == 'dashboard' %} aria-current="page"{% endif %}>Overview</a>
-        <a href="{{ url_for('articles.list_articles') }}"{% if bp == 'articles' %} aria-current="page"{% endif %}>Collected News</a>
-        <a href="{{ url_for('sources.index') }}"{% if bp == 'sources' %} aria-current="page"{% endif %}>Data Sources</a>
-        <a href="{{ url_for('activity.index') }}"{% if bp == 'activity' %} aria-current="page"{% endif %}>Collection Activity</a>
+        <a href="{{ url_for('dashboard.index') }}"{% if bp == 'dashboard' %} aria-current="page"{% endif %}>Dashboard</a>
+        <details class="nav-group"{% if bp in ('articles', 'sources', 'activity') %} open{% endif %}>
+          <summary{% if bp in ('articles', 'sources', 'activity') %} aria-current="page"{% endif %}>News</summary>
+          <div class="nav-menu">
+            <a href="{{ url_for('articles.list_articles') }}"{% if bp == 'articles' %} aria-current="page"{% endif %}>News Feed</a>
+            <a href="{{ url_for('sources.index') }}"{% if bp == 'sources' %} aria-current="page"{% endif %}>Data Sources</a>
+            <a href="{{ url_for('activity.index') }}"{% if bp == 'activity' %} aria-current="page"{% endif %}>Collection Activity</a>
+          </div>
+        </details>
+        <a href="{{ url_for('calendar.index') }}"{% if bp == 'calendar' %} aria-current="page"{% endif %}>Calendar</a>
         <a href="{{ url_for('settings.index') }}"{% if bp == 'settings' %} aria-current="page"{% endif %}>Settings</a>
       </nav>
     </div>

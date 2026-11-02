@@ -34,7 +34,7 @@ class CollectionManager:
                 return None, "A collection run is already in progress."
             rows = [r for r in SourceRepository(self.db).list_sources() if r["enabled"]]
             if not rows:
-                return None, "There are no enabled sources. Add or enable one on the Data Sources page."
+                return None, "There are no enabled sources. Add or enable one under News > Data Sources."
             sources = [
                 FeedSource(r["name"], r["feed_url"], True, r["source_type"], r["alert_topic"], r["id"])
                 for r in rows

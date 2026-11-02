@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}{{ item.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">Calendar · {{ item.kind|capitalize }}</p><h1>{{ item.title }}</h1><p class="meta"><span class="badge event-{{ item.color }}">{{ item.category }}</span><span class="badge">{{ item.status_label }}</span></p></div>
+  <div class="actions"><a class="btn btn-primary" href="{{ url_for('calendar.edit', item_id=item.id) }}">Edit</a><a class="btn btn-ghost" href="{{ url_for('calendar.index') }}">Back to calendar</a></div>
+</div>
+<section class="card detail-panel">
+  <dl class="details">
+    <dt>When</dt><dd>{% if item.all_day %}All day, {% endif %}{{ item.start_at|replace('T', ' ') }} – {{ item.end_at|replace('T', ' ') }}{% if not item.all_day %} local time{% endif %}</dd>
+    <dt>Location</dt><dd>{{ item.location or 'Not specified' }}</dd>
+    <dt>Description</dt><dd>{{ item.description or 'No description' }}</dd>
+    <dt>Notes</dt><dd>{{ item.notes or 'No notes' }}</dd>
+    <dt>Reminder</dt><dd>{% if item.reminder_minutes is none %}None{% elif item.reminder_minutes == 0 %}At start time{% else %}{{ item.reminder_minutes }} minutes before (saved only; delivery is not configured){% endif %}</dd>
+    <dt>Created</dt><dd>{{ item.created_at|dt }}</dd>
+    <dt>Last updated</dt><dd>{{ item.updated_at|dt }}</dd>
+  </dl>
+</section>
+{% if item.kind == 'schedule' %}
+<section class="card">
+  <h2>Schedule status</h2>
+  <form method="post" action="{{ url_for('calendar.update_status', item_id=item.id) }}" class="status-form">
+    {{ csrf_input() }}
+    <div class="field"><label for="status">Status</label><select id="status" name="status">{% for status in statuses %}<option value="{{ status }}"{% if item.status == status %} selected{% endif %}>{{ status_labels[status] }}</option>{% endfor %}</select></div>
+    <button class="btn" type="submit">Update status</button>
+  </form>
+</section>
+{% endif %}
+<form method="post" action="{{ url_for('calendar.delete', item_id=item.id) }}" data-confirm="Delete this calendar item?" class="delete-form">
+  {{ csrf_input() }}<button class="btn btn-danger" type="submit">Delete item</button>
+</form>
+{% endblock %}

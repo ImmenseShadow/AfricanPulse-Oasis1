@@ -13,9 +13,11 @@ def index():
     stats = articles.stats()
     since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat(timespec="seconds")
     runs = deps.runs()
+    now = datetime.now().astimezone().replace(tzinfo=None).isoformat(timespec="minutes")
     return render_template(
         "dashboard.html",
         stats=stats,
+        awaiting_review=stats["by_status"].get("New", 0),
         recent_count=articles.count_collected_since(since),
         configured=deps.source_repo().count(),
         enabled=deps.source_repo().count(enabled_only=True),
@@ -23,6 +25,7 @@ def index():
         latest_articles=articles.search(sort_by="collected_at", limit=8),
         latest_run=runs.latest_run(),
         running=runs.running_run(),
+        upcoming_items=deps.calendar().upcoming(now, limit=5),
     )
 
 

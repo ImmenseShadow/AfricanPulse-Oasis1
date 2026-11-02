@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
+{% block title %}Calendar{% endblock %}
+{% block content %}
+<div class="page-head calendar-head">
+  <div>
+    <p class="eyebrow">BOS Communications</p>
+    <h1>Calendar</h1>
+    <p class="muted">{{ range_label }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('calendar.create', date=selected.isoformat(), kind='event') }}">＋ Event</a>
+    <a class="btn" href="{{ url_for('calendar.create', date=selected.isoformat(), kind='schedule') }}">＋ Schedule</a>
+  </div>
+</div>
+
+<section class="calendar-toolbar" aria-label="Calendar controls">
+  <div class="calendar-navigation">
+    <a class="btn btn-ghost" href="{{ url_for('calendar.index', view=view, date=previous.isoformat()) }}" aria-label="Previous {{ view }}">&larr;</a>
+    <a class="btn btn-ghost" href="{{ url_for('calendar.index', view=view, date=today.isoformat()) }}">Today</a>
+    <a class="btn btn-ghost" href="{{ url_for('calendar.index', view=view, date=following.isoformat()) }}" aria-label="Next {{ view }}">&rarr;</a>
+  </div>
+  <nav class="view-tabs" aria-label="Calendar view">
+    {% for name in ('month', 'week', 'day', 'agenda') %}
+      <a href="{{ url_for('calendar.index', view=name, date=selected.isoformat()) }}"{% if view == name %} aria-current="page"{% endif %}>{{ name|capitalize }}</a>
+    {% endfor %}
+  </nav>
+</section>
+
+{% if view == 'month' %}
+<div class="month-grid" aria-label="Month view">
+  {% for name in ('Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat') %}<div class="weekday">{{ name }}</div>{% endfor %}
+  {% for day in days %}
+    <section class="month-day{% if day.month != selected.month %} is-outside{% endif %}{% if day < today %} is-past{% elif day > today %} is-upcoming{% endif %}{% if day == today %} is-today{% endif %}" aria-label="{{ day.strftime('%A, %B') }} {{ day.day }}">
+      <div class="day-heading">
+        <a href="{{ url_for('calendar.index', view='day', date=day.isoformat()) }}" class="day-number">{{ day.day }}</a>
+        <a class="day-add" href="{{ url_for('calendar.create', date=day.isoformat()) }}" aria-label="Create item on {{ day.isoformat() }}">+</a>
+      </div>
+      <div class="day-events">
+        {% for item in events_by_date.get(day.isoformat(), []) %}
+          <a class="event-chip event-{{ item.color }}" href="{{ url_for('calendar.detail', item_id=item.id) }}">
+            {% if not item.all_day %}<time>{{ item.start_time }}</time> {% endif %}{{ item.title }}<small>{{ item.kind|capitalize }} · {{ item.category }}</small>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="agenda-list" aria-label="{{ view|capitalize }} view">
+  {% for day in days %}
+    {% set day_items = events_by_date.get(day.isoformat(), []) %}
+    <section class="agenda-day{% if day < today %} is-past{% elif day > today %} is-upcoming{% endif %}{% if day == today %} is-today{% endif %}">
+      <header class="agenda-date">
+        <div><span class="muted">{{ day.strftime('%a') }}</span><strong>{{ day.strftime('%b') }} {{ day.day }}</strong></div>
+        <a class="btn btn-small btn-ghost" href="{{ url_for('calendar.create', date=day.isoformat()) }}">＋ Add</a>
+      </header>
+      {% if day_items %}
+        <div class="agenda-items">
+          {% for item in day_items %}
+            <a class="agenda-item event-{{ item.color }}" href="{{ url_for('calendar.detail', item_id=item.id) }}">
+              <span class="agenda-time">{% if item.all_day %}All day{% else %}{{ item.start_time }}{% endif %}</span>
+              <span class="agenda-copy"><strong>{{ item.title }}</strong><small>{{ item.kind|capitalize }} · {{ item.category }}{% if item.location %} · {{ item.location }}{% endif %}</small></span>
+              <span class="badge">{{ item.status_label }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted empty-day">Nothing planned for this date.</p>
+      {% endif %}
+    </section>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
