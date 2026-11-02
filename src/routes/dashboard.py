@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from math import pi
+from math import cos, pi, radians, sin
 from urllib.parse import urlparse
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -23,29 +23,34 @@ def _category_total(category_counts):
 
 
 def _chart_segments(category_counts, selected_name):
-    ordered = [(name, count) for name, count in category_counts.items() if count > 0]
+    ordered = [(name, count) for name, count in category_counts.items() if count > 0 and name != "Uncategorized"]
     if not ordered:
         return []
-    total = _category_total(category_counts)
+    total = sum(count for _, count in ordered)
     if total <= 0:
-        total = sum(count for _, count in ordered)
+        return []
     radius = 86
-    circumference = 2 * pi * radius
     offset = 0.0
     segments = []
     for name, count in sorted(ordered, key=lambda item: (-item[1], item[0])):
-        slice_length = circumference * (count / total) if total else 0
+        sweep = 360 * count / total
+        gap = min(0.8, sweep / 4)
+        start_angle = -90 + offset + gap / 2
+        end_angle = -90 + offset + sweep - gap / 2
+        start_x = 120 + radius * cos(radians(start_angle))
+        start_y = 120 + radius * sin(radians(start_angle))
+        end_x = 120 + radius * cos(radians(end_angle))
+        end_y = 120 + radius * sin(radians(end_angle))
+        large_arc = 1 if sweep - gap > 180 else 0
         segments.append({
             "name": name,
             "count": count,
             "percent": round((count / total * 100), 1) if total else 0,
             "color": category_color(name),
-            "stroke_dasharray": f"{slice_length:.2f} {max(circumference - slice_length, 0):.2f}",
-            "stroke_dashoffset": f"{-offset:.2f}",
+            "path": f"M {start_x:.3f} {start_y:.3f} A {radius} {radius} 0 {large_arc} 1 {end_x:.3f} {end_y:.3f}",
             "selected": name == selected_name,
-            "href": url_for("dashboard.category_intelligence", source="dashboard", category=name),
         })
-        offset += slice_length
+        offset += sweep
     return segments
 
 
@@ -93,9 +98,11 @@ def category_intelligence():
         related_articles = []
         pie_segments = []
     else:
-        selected_category = request.args.get("category") or next(iter(category_counts))
+        active_categories = {name: count for name, count in category_counts.items() if name != "Uncategorized"}
+        default_category = next(iter(active_categories), "Uncategorized")
+        selected_category = request.args.get("category") or default_category
         if selected_category not in category_counts:
-            selected_category = next(iter(category_counts))
+            selected_category = default_category
         category_summary = []
         for name in CATEGORY_META:
             count = category_counts.get(name, 0)

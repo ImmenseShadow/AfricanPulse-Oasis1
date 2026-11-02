@@ -1,3 +1,6 @@
+{% from '_macros.html' import article_item, category_selection_summary %}
+{{ category_selection_summary(selected_category, selected_count, selected_percent, latest_article) }}
+
 <section class="card" id="selected-category-panel">
   <h2>Selected category information</h2>
   <dl class="details">

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import article_item %}
+{% from '_macros.html' import article_item, category_selection_summary %}
 {% block title %}News Category Intelligence{% endblock %}
 {% block content %}
 <div data-category-intelligence-page="true" class="category-intelligence-page">
@@ -20,63 +20,51 @@
 {% else %}
   <section class="card category-intel-grid" id="category-chart-panel">
     <div class="chart-wrap">
-      <svg class="category-pie" viewBox="0 0 240 240" role="img" aria-label="Category distribution chart">
-        <circle cx="120" cy="120" r="86" fill="none" stroke="var(--surface-2)" stroke-width="42"></circle>
-        {% for segment in pie_segments %}
-        <g class="chart-segment" data-category-select="true" data-category="{{ segment.name }}" role="button" tabindex="0" aria-label="{{ segment.name }}: {{ segment.count }} articles" aria-pressed="{{ 'true' if segment.selected else 'false' }}">
-          <circle class="pie-segment {% if segment.selected %}selected{% endif %}" cx="120" cy="120" r="86" fill="none" stroke="{{ segment.color }}" stroke-width="42" stroke-linecap="butt" stroke-dasharray="{{ segment.stroke_dasharray }}" stroke-dashoffset="{{ segment.stroke_dashoffset }}" transform="rotate(-90 120 120)">
-            <title>{{ segment.name }}: {{ segment.count }} articles ({{ segment.percent }}%)</title>
-          </circle>
-        </g>
-        {% endfor %}
-        <circle cx="120" cy="120" r="58" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"></circle>
-        <text x="120" y="103" text-anchor="middle" class="donut-kicker">Selected</text>
-        <text x="120" y="126" text-anchor="middle">
-          <tspan id="selected-chart-label" x="120" dy="0" class="donut-value">{{ selected_category }}</tspan>
-          <tspan id="selected-chart-meta" x="120" dy="16" class="donut-meta">{{ selected_count }} articles</tspan>
-        </text>
-      </svg>
+      <div class="chart-visual">
+        <svg class="category-pie" viewBox="0 0 240 240" role="img" aria-label="Category distribution chart">
+          <circle class="chart-track" cx="120" cy="120" r="86" fill="none" stroke="var(--surface-2)" stroke-width="38"></circle>
+          {% for segment in pie_segments %}
+          <g class="chart-segment" data-category-select="true" data-category="{{ segment.name }}" role="button" tabindex="0" aria-label="{{ segment.name }}: {{ segment.count }} articles, {{ segment.percent }}%" aria-pressed="{{ 'true' if segment.selected else 'false' }}">
+            <path class="pie-segment {% if segment.selected %}selected{% endif %}" d="{{ segment.path }}" fill="none" stroke="{{ segment.color }}" stroke-width="38" stroke-linecap="butt">
+              <title>{{ segment.name }}: {{ segment.count }} articles ({{ segment.percent }}%)</title>
+            </path>
+          </g>
+          {% endfor %}
+        </svg>
+        <div class="donut-center" aria-live="polite" aria-atomic="true">
+          <span class="donut-kicker">Selected</span>
+          <strong id="selected-chart-label" class="donut-value">{{ selected_category }}</strong>
+          <span id="selected-chart-meta" class="donut-meta">{{ selected_count }} articles · {{ selected_percent }}%</span>
+        </div>
+      </div>
     </div>
     <div class="chart-side">
-      <p class="eyebrow">Selected category</p>
-      <h2>{{ selected_category }}</h2>
-      <dl class="details">
-        <dt>Total articles</dt>
-        <dd>{{ selected_count }}</dd>
-        <dt>Percentage</dt>
-        <dd>{{ selected_percent }}% of categorized articles</dd>
-        <dt>Latest article</dt>
-        <dd>
-          {% if latest_article %}
-          <a href="{{ url_for('articles.detail', article_id=latest_article.id) }}">{{ latest_article.title }}</a>
-          {% else %}No articles recorded{% endif %}
-        </dd>
-        <dt>Most recent publication</dt>
-        <dd>{% if latest_article and latest_article.published_at %}{{ latest_article.published_at|dt('Not available') }}{% else %}Not provided{% endif %}</dd>
-      </dl>
-      <div class="actions">
-        <a class="btn btn-primary" href="{{ url_for('articles.list_articles', category=selected_category) }}">Browse {{ selected_category }}</a>
+      {{ category_selection_summary(selected_category, selected_count, selected_percent, latest_article) }}
+      <section class="legend-panel" aria-label="Category legend">
+        <div class="section-title chart-heading">
+          <div>
+            <p class="eyebrow">Categories</p>
+            <h2>Category legend</h2>
+          </div>
+          <span class="chart-total">{{ total_categorized }} total</span>
+        </div>
+        <div class="chart-legend">
+          {% for item in category_summary if item.name != 'Uncategorized' %}
+          <button type="button" class="legend-item {% if item.selected %}selected{% endif %}" data-category-select="true" data-category="{{ item.name }}" aria-pressed="{{ 'true' if item.selected else 'false' }}">
+            <svg class="legend-swatch" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="{{ item.color }}"></circle></svg>
+            <span class="legend-text">{{ item.name }}</span>
+            <span class="legend-count">{{ item.count }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </section>
+      {% if not pie_segments %}
+      <p class="muted chart-empty">No categorized articles to chart yet.</p>
+      {% endif %}
+      <div class="chart-uncategorized">
+        <span>Uncategorized</span>
+        <strong>{{ category_counts.get('Uncategorized', 0) }}</strong>
       </div>
-    </div>
-  </section>
-
-  <section class="card legend-panel">
-    <div class="section-title chart-heading">
-      <div>
-        <p class="eyebrow">Categories</p>
-        <h2>Category legend</h2>
-      </div>
-      <span class="chart-total">{{ total_categorized }} total</span>
-    </div>
-    <div class="chart-legend" aria-label="Category legend">
-      {% for item in category_summary %}
-      {% set category_key = item.name|replace(' ', '-')|lower %}
-      <button type="button" class="legend-item category-{{ category_key }} {% if item.selected %}selected{% endif %}" data-category-select="true" data-category="{{ item.name }}" aria-pressed="{{ 'true' if item.selected else 'false' }}">
-        <span class="legend-swatch"></span>
-        <span class="legend-text">{{ item.name }}</span>
-        <span class="legend-count">{{ item.count }}</span>
-      </button>
-      {% endfor %}
     </div>
   </section>
 

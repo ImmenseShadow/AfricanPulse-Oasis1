@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.app import create_app
 from src.collectors.rss_collector import CollectorError, parse_feed
+from src.routes.dashboard import _chart_segments
 from src.storage.article_repository import ArticleRepository
 from src.storage.collection_repository import CollectionRepository
 from tests.helpers import ATOM_SAMPLE, RSS_SAMPLE, make_article
@@ -312,6 +313,41 @@ class CategoryIntelligenceRouteTests(WebTestCase):
         self.assertIn("News Category Intelligence", body)
         self.assertIn("Politics and Governance", body)
         self.assertIn("Health", body)
+
+    def test_donut_segments_exclude_uncategorized_from_proportions(self):
+        counts = {
+            "Uncategorized": 47,
+            "Politics and Governance": 9,
+            "Business and Economy": 8,
+            "Technology": 6,
+            "Health": 4,
+        }
+
+        self.app.config["SERVER_NAME"] = "example.com"
+        with self.app.app_context():
+            segments = _chart_segments(counts, "Health")
+
+        self.assertNotIn("Uncategorized", [segment["name"] for segment in segments])
+        self.assertEqual([segment["name"] for segment in segments[:4]], [
+            "Politics and Governance",
+            "Business and Economy",
+            "Technology",
+            "Health",
+        ])
+        self.assertEqual(sum(segment["count"] for segment in segments), 27)
+        self.assertAlmostEqual(sum(segment["percent"] for segment in segments), 100.0, delta=0.1)
+        with self.app.app_context():
+            empty_segments = _chart_segments({"Uncategorized": 4, "Health": 0}, "Health")
+        self.assertEqual(empty_segments, [])
+
+    def test_category_intelligence_defaults_to_categorized_data(self):
+        response = self.client.get("/category-intelligence?source=dashboard")
+        body = response.data.decode()
+
+        self.assertIn('data-category="Politics and Governance" role="button"', body)
+        self.assertNotIn('data-category="Uncategorized" role="button"', body)
+        self.assertIn('<span>Uncategorized</span>', body)
+        self.assertIn("Politics and Governance", body)
 
 
 class SettingsRouteTests(WebTestCase):

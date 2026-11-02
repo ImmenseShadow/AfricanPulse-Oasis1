@@ -1,5 +1,29 @@
 {% macro csrf_input() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
 
+{% macro category_selection_summary(selected_category, selected_count, selected_percent, latest_article) %}
+<div id="chart-side-summary">
+  <p class="eyebrow">Selected category</p>
+  <h2>{{ selected_category }}</h2>
+  <dl class="details">
+    <dt>Total articles</dt>
+    <dd>{{ selected_count }}</dd>
+    <dt>Percentage</dt>
+    <dd>{{ selected_percent }}% of categorized articles</dd>
+    <dt>Latest article</dt>
+    <dd>
+      {% if latest_article %}
+      <a href="{{ url_for('articles.detail', article_id=latest_article.id) }}">{{ latest_article.title }}</a>
+      {% else %}No articles recorded{% endif %}
+    </dd>
+    <dt>Most recent publication</dt>
+    <dd>{% if latest_article and latest_article.published_at %}{{ latest_article.published_at|dt('Not available') }}{% else %}Not provided{% endif %}</dd>
+  </dl>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('articles.list_articles', category=selected_category) }}">Browse {{ selected_category }}</a>
+  </div>
+</div>
+{% endmacro %}
+
 {% macro article_item(a) %}
 <article class="card article">
   <h3 class="article-title"><a href="{{ url_for('articles.detail', article_id=a.id) }}">{{ a.title }}</a></h3>

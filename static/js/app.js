@@ -80,22 +80,22 @@ document.addEventListener("submit", function (event) {
 (function setupCategoryIntelligence() {
   var page = document.querySelector("[data-category-intelligence-page]");
   if (!page) { return; }
+  var latestRequest = 0;
 
   function updateSelectionState(category) {
-    var controls = Array.prototype.slice.call(document.querySelectorAll("[data-category-select]"));
+    var controls = Array.prototype.slice.call(page.querySelectorAll("[data-category-select]"));
     controls.forEach(function (control) {
       var selected = control.getAttribute("data-category") === category;
       control.classList.toggle("selected", selected);
-      var circle = control.querySelector("circle");
-      if (circle) {
-        circle.classList.toggle("selected", selected);
+      var segment = control.querySelector(".pie-segment");
+      if (segment) {
+        segment.classList.toggle("selected", selected);
       }
-      if (control.tagName === "BUTTON") {
-        control.setAttribute("aria-pressed", selected ? "true" : "false");
-      }
-      if (control.tagName === "G") {
-        control.setAttribute("aria-pressed", selected ? "true" : "false");
-      }
+      control.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    page.querySelectorAll(".category-detail").forEach(function (detail) {
+      var heading = detail.querySelector("h3");
+      detail.classList.toggle("active", Boolean(heading) && heading.textContent.trim() === category);
     });
     var chartLabel = document.getElementById("selected-chart-label");
     var chartMeta = document.getElementById("selected-chart-meta");
@@ -106,24 +106,34 @@ document.addEventListener("submit", function (event) {
     if (chartMeta && selectedPanel) {
       var details = selectedPanel.querySelectorAll("dd");
       if (details.length >= 4) {
-        chartMeta.textContent = details[2].textContent.trim() + " articles • " + details[3].textContent.trim();
+        chartMeta.textContent = details[2].textContent.trim() + " articles · " + details[3].textContent.trim();
       }
     }
   }
 
   function loadCategory(category) {
+    var requestId = ++latestRequest;
     var url = "/category-intelligence?source=dashboard&category=" + encodeURIComponent(category) + "&fragment=1";
     fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
-      .then(function (response) { return response.text(); })
+      .then(function (response) {
+        if (!response.ok) { throw new Error("Category details could not be loaded."); }
+        return response.text();
+      })
       .then(function (html) {
+        if (requestId !== latestRequest) { return; }
         var doc = new DOMParser().parseFromString(html, "text/html");
+        var nextSummary = doc.querySelector("#chart-side-summary");
         var selectedPanel = doc.querySelector("#selected-category-panel");
         var relatedPanel = doc.querySelector("#related-articles-panel");
+        var currentSummary = page.querySelector("#chart-side-summary");
+        if (nextSummary && currentSummary) {
+          currentSummary.replaceWith(nextSummary);
+        }
         if (selectedPanel) {
-          document.getElementById("selected-category-panel").innerHTML = selectedPanel.innerHTML;
+          page.querySelector("#selected-category-panel").innerHTML = selectedPanel.innerHTML;
         }
         if (relatedPanel) {
-          document.getElementById("related-articles-panel").innerHTML = relatedPanel.innerHTML;
+          page.querySelector("#related-articles-panel").innerHTML = relatedPanel.innerHTML;
         }
         updateSelectionState(category);
       })
