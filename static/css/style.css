@@ -270,10 +270,22 @@ summary { cursor: pointer; color: #176a4b; }
 .legend-swatch { flex: 0 0 0.8rem; width: 0.8rem; height: 0.8rem; display: inline-block; }
 .legend-text { flex: 1; text-align: left; min-width: 0; }
 .legend-count { color: var(--muted); font-weight: 700; }
-.category-detail { border-top: 1px solid var(--border); padding-top: var(--space-3); margin-top: var(--space-3); }
-.category-detail.active { background: rgba(24, 77, 77, 0.03); border: 1px solid rgba(24, 77, 77, 0.18); border-radius: 12px; padding: var(--space-3); }
+.category-reference-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
+.category-detail { min-width: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.category-detail.active { border-color: rgba(24, 77, 77, 0.35); background: rgba(24, 77, 77, 0.03); }
+.category-detail h3 { display: flex; align-items: flex-start; gap: var(--space-2); }
+.category-marker { flex: 0 0 0.8rem; width: 0.8rem; height: 0.8rem; margin-top: 0.22rem; }
+.category-detail p { color: var(--muted); }
 .tag-list { list-style: none; padding: 0; margin: var(--space-2) 0; display: flex; flex-wrap: wrap; gap: var(--space-1); }
-.tag-list li { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.2rem 0.6rem; color: var(--text); font-size: 0.8rem; }
+.tag-list li { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.45rem; color: var(--text); font-size: 0.8rem; }
+.assignment-feedback:empty { display: none; }
+.assigned-collections, .collection-article-list { list-style: none; padding: 0; margin: var(--space-2) 0 var(--space-3); }
+.assigned-collections { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.assigned-collections li { padding: var(--space-1) var(--space-2); border-left: 3px solid #2d7a6d; background: var(--surface-2); color: var(--text); }
+.collection-article-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--border); }
+.collection-article-list a { font-weight: 600; }
+.collection-article-list span { font-size: 0.85rem; }
+.collection-card h3 { margin-bottom: var(--space-1); }
 
 @media (max-width: 900px) {
   .category-intel-grid { grid-template-columns: minmax(270px, 0.8fr) minmax(0, 1.2fr); gap: var(--space-3); }

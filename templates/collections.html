@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
 {% block title %}Collections{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Collections</h1><p class="muted">Bookmark and group articles by topic or workflow.</p></div></div>
 <div class="card">
   <h2>Create collection</h2>
   <form method="post" action="{{ url_for('collections.create_collection') }}">
+    {{ csrf_input() }}
     <div class="field"><label for="name">Name</label><input id="name" name="name" required></div>
     <div class="field"><label for="description">Description</label><textarea id="description" name="description" rows="3"></textarea></div>
     <div class="field checkbox-row"><label><input type="checkbox" name="is_shared" value="1"> Shared collection</label></div>
@@ -13,7 +15,23 @@
 </div>
 {% if collections %}
   {% for collection in collections %}
-    <div class="card"><h3>{{ collection.name }}</h3><p class="muted">{{ collection.description or 'No description' }}</p></div>
+    <section class="card collection-card">
+      <h3>{{ collection.name }}</h3>
+      <p class="muted">{{ collection.description or 'No description' }}</p>
+      {% if collection.articles %}
+      <ul class="collection-article-list">
+        {% for article in collection.articles %}
+        <li>
+          <a href="{{ url_for('articles.detail', article_id=article.id) }}">{{ article.title }}</a>
+          <span class="muted">{{ article.category }}{% if article.published_at %} · {{ article.published_at|dt }}{% endif %}</span>
+          <span class="badge">{{ article.status }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">No articles assigned yet.</p>
+      {% endif %}
+    </section>
   {% endfor %}
 {% else %}
   <div class="card empty"><h3>No collections yet</h3><p>Create a collection to group related articles.</p></div>

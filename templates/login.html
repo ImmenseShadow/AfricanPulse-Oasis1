@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
+{% from '_macros.html' import csrf_input %}
 {% block title %}Sign in{% endblock %}
 {% block content %}
 <div class="card narrow-form">
   <h1>Editorial sign in</h1>
   <form method="post" action="{{ url_for('auth.login') }}">
+    {{ csrf_input() }}
     <div class="field">
       <label for="username">Username</label>
       <input id="username" name="username" value="{{ username or '' }}" required>

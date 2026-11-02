@@ -70,17 +70,17 @@
 
   <section class="card">
     <h2>Understanding the Categories</h2>
-    {% for item in category_summary %}
-    <article class="category-detail {% if item.selected %}active{% endif %}">
-      <h3>{{ item.name }}</h3>
-      <p><strong>Summary:</strong> {{ item.summary }}</p>
-      <p>{{ item.detail }}</p>
-      <ul class="tag-list">
-        {% for example in item.examples %}<li>{{ example }}</li>{% endfor %}
-      </ul>
-      <p class="muted">Articles: {{ item.count }} · {{ item.percent }}% of categorized articles</p>
-    </article>
-    {% endfor %}
+    <div class="category-reference-grid">
+      {% for item in category_summary %}
+      <article class="category-detail {% if item.selected %}active{% endif %}">
+        <h3><svg class="category-marker" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="{{ item.color }}"></circle></svg>{{ item.name }}</h3>
+        <p>{{ item.summary }}</p>
+        <ul class="tag-list">
+          {% for example in item.examples %}<li>{{ example }}</li>{% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </div>
   </section>
 
   <section class="card" id="selected-category-panel">

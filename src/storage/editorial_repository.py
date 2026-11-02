@@ -56,6 +56,27 @@ class EditorialRepository:
                 ).fetchall()
         return [dict(r) for r in rows]
 
+    def list_article_collections(self, article_id: int) -> list[dict]:
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                """SELECT c.* FROM collections c
+                   JOIN collection_articles ca ON ca.collection_id = c.id
+                   WHERE ca.article_id = ? ORDER BY c.name""",
+                (article_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_collection_articles(self, collection_id: int) -> list[dict]:
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                """SELECT a.* FROM articles a
+                   JOIN collection_articles ca ON ca.article_id = a.id
+                   WHERE ca.collection_id = ?
+                   ORDER BY a.published_at IS NULL, a.published_at DESC, a.id DESC""",
+                (collection_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def bookmark(self, user_id: int, article_id: int) -> bool:
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         with self.db.connect() as conn:
@@ -76,6 +97,11 @@ class EditorialRepository:
                 "INSERT OR IGNORE INTO collection_articles (collection_id, article_id, created_at) VALUES (?, ?, ?)",
                 (collection_id, article_id, datetime.now(timezone.utc).isoformat(timespec="seconds")),
             )
+            if cursor.rowcount:
+                conn.execute(
+                    "UPDATE articles SET status = 'Under Review' WHERE id = ? AND status = 'New'",
+                    (article_id,),
+                )
             return cursor.rowcount > 0
 
     def remove_article_from_collection(self, collection_id: int, article_id: int) -> bool:

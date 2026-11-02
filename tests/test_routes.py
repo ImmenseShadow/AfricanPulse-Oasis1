@@ -3,12 +3,16 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from src.app import create_app
 from src.collectors.rss_collector import CollectorError, parse_feed
+from src.models.article import ROLE_EDITOR, ROLE_VIEWER
 from src.routes.dashboard import _chart_segments
 from src.storage.article_repository import ArticleRepository
 from src.storage.collection_repository import CollectionRepository
+from src.storage.editorial_repository import EditorialRepository
+from src.storage.user_repository import UserRepository
 from tests.helpers import ATOM_SAMPLE, RSS_SAMPLE, make_article
 
 FEEDS = {"https://a.example/rss": RSS_SAMPLE, "https://b.example/atom": ATOM_SAMPLE}
@@ -93,6 +97,19 @@ class CsrfTests(WebTestCase):
 
     def test_forms_contain_a_token(self):
         self.assertIn(b'name="csrf_token"', self.client.get("/sources").data)
+
+    def test_login_and_collection_forms_include_csrf_tokens(self):
+        self.assertIn(b'name="csrf_token"', self.client.get("/login").data)
+        self.assertIn(b'name="csrf_token"', self.client.get("/collections").data)
+
+    def test_login_form_can_authenticate_with_csrf(self):
+        user_id = UserRepository(self.db).create_user("login-editor", "test-password", ROLE_EDITOR)
+
+        response = self.post("/login", {"username": "login-editor", "password": "test-password"})
+
+        self.assertEqual(response.status_code, 302)
+        with self.client.session_transaction() as session:
+            self.assertEqual(session["user_id"], user_id)
 
 
 class SourceRouteTests(WebTestCase):
@@ -348,6 +365,183 @@ class CategoryIntelligenceRouteTests(WebTestCase):
         self.assertNotIn('data-category="Uncategorized" role="button"', body)
         self.assertIn('<span>Uncategorized</span>', body)
         self.assertIn("Politics and Governance", body)
+
+    def test_category_reference_omits_distribution_statistics(self):
+        response = self.client.get("/category-intelligence?source=dashboard")
+        body = response.data.decode()
+        reference = body.split("Understanding the Categories", 1)[1].split(
+            '<section class="card" id="selected-category-panel">', 1
+        )[0]
+
+        for category in (
+            "Politics and Governance", "Technology and Innovation", "Business and Economy",
+            "Education", "Environment", "Security", "Health", "International Affairs",
+            "Culture and Society", "Science and Research",
+        ):
+            self.assertIn(category, reference)
+        self.assertIn('fill="#1e5f7a"', reference)
+        self.assertNotIn("Articles:", reference)
+        self.assertNotIn("% of categorized articles", reference)
+
+
+class EditorialAssignmentTests(WebTestCase):
+    def setUp(self):
+        super().setUp()
+        article = make_article(
+            title="Editorial assignment story",
+            link="https://example.com/editorial/assignment",
+            published="2026-04-04T10:00:00Z",
+            category="Health",
+        )
+        self.repo.upsert(article)
+        self.article = self.repo.search(query=article.title)[0]
+        self.user_id = UserRepository(self.db).create_user("editor", "test-password", ROLE_EDITOR)
+        self.editorial = EditorialRepository(self.db)
+        self.collection = self.editorial.create_collection("Health desk", "Health stories", self.user_id)
+        with self.client.session_transaction() as session:
+            session["user_id"] = self.user_id
+
+    def test_assignment_persists_and_appears_after_returning_to_collections(self):
+        detail = self.client.get(f"/articles/{self.article.id}").data
+        self.assertIn(b'data-collection-assignment', detail)
+        self.assertIn(b'name="csrf_token"', detail)
+        self.assertIn(b"Health desk", detail)
+
+        response = self.post(
+            f"/articles/{self.article.id}/collections",
+            {"collection_id": self.collection["id"]},
+            follow_redirects=True,
+        )
+
+        self.assertIn(b"Article assigned to Health desk", response.data)
+        self.assertEqual(len(self.editorial.list_collection_articles(self.collection["id"])), 1)
+        self.assertIn(b"Editorial assignment story", self.client.get("/collections").data)
+        self.assertEqual(self.editorial.list_audit_logs()[0]["action"], "article_assigned")
+        stored = self.repo.get(self.article.id)
+        self.assertEqual(stored.url, "https://example.com/editorial/assignment")
+        self.assertEqual(stored.category, "Health")
+        self.assertEqual(stored.published_at, self.article.published_at)
+        self.assertEqual(stored.status, "Under Review")
+
+    def test_editorial_status_confirmation_persists_note_and_audit(self):
+        response = self.post(
+            f"/articles/{self.article.id}/editorial",
+            {"status": "Under Review", "notes": "Check the source details."},
+            follow_redirects=True,
+        )
+
+        self.assertIn(b"Editorial details saved", response.data)
+        self.assertEqual(self.repo.get(self.article.id).status, "Under Review")
+        self.assertEqual(self.repo.get(self.article.id).notes, "Check the source details.")
+        self.assertEqual(self.editorial.list_notes(self.article.id)[0]["body"], "Check the source details.")
+        self.assertEqual(self.editorial.list_audit_logs()[0]["action"], "status_update")
+
+    def test_note_history_failure_is_reported_without_hiding_saved_status(self):
+        with patch("src.routes.articles.deps.editorial_service", side_effect=RuntimeError("private db detail")):
+            response = self.post(
+                f"/articles/{self.article.id}/editorial",
+                {"status": "Under Review", "notes": "Keep this note."},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        page = self.client.get(f"/articles/{self.article.id}").data
+        self.assertIn(b"Editorial details were saved, but note history could not be updated", page)
+        self.assertNotIn(b"private db detail", page)
+        self.assertEqual(self.repo.get(self.article.id).status, "Under Review")
+        self.assertEqual(self.repo.get(self.article.id).notes, "Keep this note.")
+
+    def test_ajax_confirmation_returns_saved_assignment(self):
+        response = self.post(
+            f"/articles/{self.article.id}/collections",
+            {"collection_id": self.collection["id"]},
+            headers={"X-Requested-With": "XMLHttpRequest"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["ok"])
+        self.assertTrue(response.json["added"])
+        self.assertEqual(response.json["collection_name"], "Health desk")
+        self.assertEqual(len(self.editorial.list_collection_articles(self.collection["id"])), 1)
+
+    def test_storage_failure_is_logged_and_returns_retryable_error(self):
+        with patch.object(EditorialRepository, "add_article_to_collection", side_effect=RuntimeError("private db detail")):
+            response = self.post(
+                f"/articles/{self.article.id}/collections",
+                {"collection_id": self.collection["id"]},
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(response.json["ok"])
+        self.assertIn("could not be saved", response.json["message"])
+        self.assertNotIn("private db detail", response.data.decode())
+
+    def test_repeated_assignment_does_not_create_duplicates(self):
+        url = f"/articles/{self.article.id}/collections"
+        data = {"collection_id": self.collection["id"]}
+
+        self.post(url, data)
+        response = self.post(url, data, follow_redirects=True)
+
+        self.assertIn(b"already assigned", response.data)
+        self.assertEqual(len(self.editorial.list_collection_articles(self.collection["id"])), 1)
+
+    def test_assignment_preserves_existing_editorial_status(self):
+        self.repo.update_editorial(self.article.id, "Approved", "Already reviewed")
+
+        self.post(
+            f"/articles/{self.article.id}/collections",
+            {"collection_id": self.collection["id"]},
+        )
+
+        self.assertEqual(self.repo.get(self.article.id).status, "Approved")
+
+    def test_invalid_assignment_targets_are_rejected(self):
+        response = self.post(
+            f"/articles/{self.article.id}/collections",
+            {"collection_id": 9999},
+            follow_redirects=True,
+        )
+        self.assertIn(b"Choose an available editorial section", response.data)
+        missing_article = self.post(
+            "/articles/9999/collections",
+            {"collection_id": self.collection["id"]},
+            follow_redirects=True,
+        )
+        self.assertIn(b"That article was not found", missing_article.data)
+
+    def test_viewers_cannot_assign_articles(self):
+        viewer_id = UserRepository(self.db).create_user("viewer", "test-password", ROLE_VIEWER)
+        with self.client.session_transaction() as session:
+            session["user_id"] = viewer_id
+
+        response = self.post(
+            f"/articles/{self.article.id}/collections",
+            {"collection_id": self.collection["id"]},
+            follow_redirects=True,
+        )
+
+        self.assertIn(b"permission to assign articles", response.data)
+        self.assertEqual(self.editorial.list_collection_articles(self.collection["id"]), [])
+
+    def test_viewers_cannot_confirm_editorial_status(self):
+        viewer_id = UserRepository(self.db).create_user("status-viewer", "test-password", ROLE_VIEWER)
+        with self.client.session_transaction() as session:
+            session["user_id"] = viewer_id
+
+        response = self.post(
+            f"/articles/{self.article.id}/editorial",
+            {"status": "Approved", "notes": "not allowed"},
+            follow_redirects=True,
+        )
+
+        self.assertIn(b"permission to update editorial status", response.data)
+        self.assertEqual(self.repo.get(self.article.id).status, "New")
+        matching_routes = [
+            rule for rule in self.app.url_map.iter_rules()
+            if rule.rule == "/articles/<int:article_id>/editorial" and "POST" in rule.methods
+        ]
+        self.assertEqual(len(matching_routes), 1)
 
 
 class SettingsRouteTests(WebTestCase):

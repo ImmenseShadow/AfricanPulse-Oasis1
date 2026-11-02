@@ -23,6 +23,42 @@
   <p><a class="btn btn-primary" href="{{ article.url }}" target="_blank" rel="noopener noreferrer">Open original source</a></p>
 </article>
 
+<section class="card" id="article-editorial-sections">
+  <h2>Editorial sections</h2>
+  <p class="muted">Review the destination before confirming. Assignments are saved to the selected collection.</p>
+  <div id="collection-assignment-feedback" role="status" aria-live="polite"></div>
+  <ul id="assigned-collections-list" class="assigned-collections">
+    {% for collection in article_collections %}
+    <li data-assigned-collection-id="{{ collection.id }}">{{ collection.name }}</li>
+    {% endfor %}
+  </ul>
+  <p id="no-assigned-collections" class="muted" {% if article_collections %}hidden{% endif %}>This article is not assigned to a section yet.</p>
+  {% if can_assign %}
+    {% if available_collections %}
+    <form method="post" action="{{ url_for('collections.add_article_from_form', article_id=article.id) }}" data-collection-assignment data-processing-label="Saving assignment...">
+      {{ csrf_input() }}
+      <div class="field">
+        <label for="collection_id">Destination section</label>
+        <select id="collection_id" name="collection_id" required>
+          <option value="">Choose a section</option>
+          {% for collection in available_collections %}
+          <option value="{{ collection.id }}" {% if selected_collection_id == collection.id %}selected{% endif %}>{{ collection.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Confirm assignment</button>
+    </form>
+    <p id="no-available-collections" class="muted" hidden>No other sections are available for this article.</p>
+    {% elif article_collections %}
+    <p class="muted">This article is assigned to all sections available to you.</p>
+    {% else %}
+    <p class="muted">No sections are available. Create a collection from the <a href="{{ url_for('collections.index') }}">Collections page</a> first.</p>
+    {% endif %}
+  {% else %}
+  <p class="muted">Sign in with an editor or administrator account to assign articles.</p>
+  {% endif %}
+</section>
+
 <section class="card">
   <h2>BOS editorial review</h2>
   <p class="muted">This section is BOS writing. Collection does not mean the article has been fact checked or approved.</p>

@@ -1,6 +1,73 @@
 // Small progressive enhancements. The site works without JavaScript except live refresh.
+function submitCollectionAssignment(form) {
+  var button = form.querySelector("button[type=submit]");
+  var select = form.querySelector("select[name=collection_id]");
+  var feedback = document.getElementById("collection-assignment-feedback");
+  var assignedList = document.getElementById("assigned-collections-list");
+  var originalLabel = button.textContent;
+  var processingLabel = form.getAttribute("data-processing-label") || "Saving...";
+  button.disabled = true;
+  button.textContent = processingLabel;
+  feedback.textContent = "";
+  feedback.className = "assignment-feedback";
+
+  fetch(form.action, {
+    method: "POST",
+    body: new FormData(form),
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    credentials: "same-origin"
+  }).then(function (response) {
+    return response.json().catch(function () {
+      throw new Error("The server returned an unreadable response.");
+    }).then(function (data) {
+      if (!response.ok || !data.ok) {
+        var failure = new Error(data.message || "The assignment could not be saved.");
+        failure.assignmentFailure = true;
+        throw failure;
+      }
+      return data;
+    });
+  }).then(function (data) {
+    var existing = Array.prototype.some.call(assignedList.children, function (item) {
+      return item.getAttribute("data-assigned-collection-id") === String(data.collection_id);
+    });
+    if (!existing) {
+      var item = document.createElement("li");
+      item.setAttribute("data-assigned-collection-id", data.collection_id);
+      item.textContent = data.collection_name;
+      assignedList.appendChild(item);
+    }
+    document.getElementById("no-assigned-collections").hidden = false;
+    document.getElementById("no-assigned-collections").textContent = "This article is assigned to the sections shown above.";
+    var option = Array.prototype.find.call(select.options, function (entry) {
+      return entry.value === String(data.collection_id);
+    });
+    if (option) { option.remove(); }
+    select.value = "";
+    feedback.textContent = data.message;
+    feedback.className = "assignment-feedback flash flash-success";
+    if (select.options.length <= 1) {
+      form.hidden = true;
+      document.getElementById("no-available-collections").hidden = false;
+    }
+  }).catch(function (error) {
+    feedback.textContent = error.assignmentFailure
+      ? error.message
+      : "The connection was interrupted. Your selection is still here; try again.";
+    feedback.className = "assignment-feedback flash flash-error";
+  }).finally(function () {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  });
+}
+
 document.addEventListener("submit", function (event) {
   var form = event.target;
+  if (form.matches("[data-collection-assignment]")) {
+    event.preventDefault();
+    submitCollectionAssignment(form);
+    return;
+  }
   var message = form.getAttribute("data-confirm");
   if (message && !window.confirm(message)) {
     event.preventDefault();

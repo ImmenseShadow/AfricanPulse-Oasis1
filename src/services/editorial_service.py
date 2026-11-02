@@ -24,6 +24,12 @@ class EditorialService:
     def list_collections(self, user_id: Optional[int] = None) -> list[dict]:
         return self.repo.list_collections(user_id)
 
+    def list_article_collections(self, article_id: int) -> list[dict]:
+        return self.repo.list_article_collections(article_id)
+
+    def list_collection_articles(self, collection_id: int) -> list[dict]:
+        return self.repo.list_collection_articles(collection_id)
+
     def bookmark(self, user_id: int, article_id: int) -> bool:
         return self.repo.bookmark(user_id, article_id)
 
