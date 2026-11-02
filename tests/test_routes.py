@@ -274,6 +274,46 @@ class ArticleRouteTests(WebTestCase):
         self.assertIn("Technology", html)
 
 
+class CategoryIntelligenceRouteTests(WebTestCase):
+    def setUp(self):
+        super().setUp()
+        self.repo.upsert(make_article(
+            title="Election reform briefing",
+            link="https://example.com/election/1",
+            published="2026-04-01T10:00:00Z",
+            summary="Parliament debates election rules.",
+            category="Politics and Governance",
+        ))
+        self.repo.upsert(make_article(
+            title="New health initiative",
+            link="https://example.com/health/1",
+            published="2026-04-02T10:00:00Z",
+            summary="Hospital network expands access.",
+            category="Health",
+        ))
+        self.repo.upsert(make_article(
+            title="Medicine research update",
+            link="https://example.com/health/2",
+            published="2026-04-03T10:00:00Z",
+            summary="Clinical trial results published.",
+            category="Health",
+        ))
+
+    def test_dashboard_category_component_links_to_the_intelligence_page(self):
+        html = self.client.get("/").data.decode()
+        self.assertIn("View Category Insights", html)
+        self.assertIn('/category-intelligence?source=dashboard', html)
+
+    def test_category_intelligence_requires_dashboard_navigation_context(self):
+        self.assertEqual(self.client.get("/category-intelligence").status_code, 302)
+        res = self.client.get("/category-intelligence?source=dashboard")
+        self.assertEqual(res.status_code, 200)
+        body = res.data.decode()
+        self.assertIn("News Category Intelligence", body)
+        self.assertIn("Politics and Governance", body)
+        self.assertIn("Health", body)
+
+
 class SettingsRouteTests(WebTestCase):
     def test_save_and_reload(self):
         res = self.post("/settings", {"default_sort": "collected_at", "default_category": "Health",

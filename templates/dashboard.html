@@ -49,18 +49,35 @@
       <p class="muted">No collection has been run yet.</p>
     {% endif %}
   </section>
-  <section class="card">
-    <h2>Articles by category</h2>
+  <section class="card category-breakdown-card">
+    <div class="section-title chart-heading">
+      <div>
+        <p class="eyebrow">Distribution</p>
+        <h2>Articles by category</h2>
+      </div>
+      {% if total_categorized %}
+        <span class="chart-total">{{ total_categorized }} categorized</span>
+      {% endif %}
+    </div>
     {% if categories %}
       <ul class="bar-list">
       {% for name, n in categories.items() %}
-        <li>
-          <a href="{{ url_for('articles.list_articles', category=name) }}">{{ name }}</a>
-          <progress max="{{ stats.total }}" value="{{ n }}">{{ n }}</progress>
-          <span>{{ n }}</span>
+        {% set pct = ((n / total_categorized) * 100) if total_categorized else 0 %}
+        {% set category_key = name|replace(' ', '-')|lower %}
+        <li class="category-bar-row category-bar-{{ category_key }}" title="{{ name }}: {{ n }} articles ({{ '%.1f'|format(pct) }}%)">
+          <div class="category-bar-meta">
+            <a class="dashboard-category-link" href="{{ url_for('dashboard.category_intelligence', source='dashboard', category=name) }}">{{ name }}</a>
+          </div>
+          <div class="category-bar-track" aria-hidden="true">
+            <span class="category-bar-fill" data-width="{{ pct }}"></span>
+          </div>
+          <span class="category-bar-value">{{ n }}</span>
         </li>
       {% endfor %}
       </ul>
+      <div class="actions">
+        <a class="btn btn-primary" href="{{ url_for('dashboard.category_intelligence', source='dashboard') }}">View Category Insights</a>
+      </div>
       <p class="muted small">Categories are assigned by simple keyword rules, not AI. Unclear articles stay Uncategorized.</p>
     {% else %}
       <p class="muted">No articles to count yet.</p>

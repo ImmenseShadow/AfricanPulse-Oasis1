@@ -1,0 +1,32 @@
+<section class="card" id="selected-category-panel">
+  <h2>Selected category information</h2>
+  <dl class="details">
+    <dt>Selected category</dt>
+    <dd>{{ selected_category }}</dd>
+    <dt>Description</dt>
+    <dd>{{ selected_meta.detail if selected_meta else 'No description available.' }}</dd>
+    <dt>Total articles</dt>
+    <dd>{{ selected_count }}</dd>
+    <dt>Percentage of categorized articles</dt>
+    <dd>{{ selected_percent }}%</dd>
+    <dt>Most recent article</dt>
+    <dd>{% if latest_article %}<a href="{{ url_for('articles.detail', article_id=latest_article.id) }}">{{ latest_article.title }}</a>{% else %}No articles recorded{% endif %}</dd>
+    <dt>Latest publication date</dt>
+    <dd>{% if latest_article and latest_article.published_at %}{{ latest_article.published_at|dt('Not available') }}{% else %}Not provided{% endif %}</dd>
+  </dl>
+</section>
+
+<section class="card" id="related-articles-panel">
+  <div class="section-title">
+    <h2>Related articles</h2>
+    <a href="{{ url_for('articles.list_articles', category=selected_category) }}">Browse all</a>
+  </div>
+  {% if related_articles %}
+    {% for article in related_articles %}{{ article_item(article) }}{% endfor %}
+  {% else %}
+    <div class="empty">
+      <h3>No articles in {{ selected_category }}</h3>
+      <p class="muted">This category has no stored articles yet. Choose another segment or return to the dashboard overview.</p>
+    </div>
+  {% endif %}
+</section>

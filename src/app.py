@@ -13,7 +13,7 @@ from config.settings import (
     PROJECT_ROOT, allow_private_feeds, get_database_path, load_or_create_secret_key, load_sources, ConfigError,
 )
 from src.collectors.rss_collector import fetch_feed
-from src.models.article import SOURCE_TYPES
+from src.models.article import SOURCE_TYPES, category_color
 from src.security import init_security
 from src.services.collection_manager import CollectionManager
 from src.storage.collection_repository import CollectionRepository
@@ -86,6 +86,7 @@ def create_app(config: Optional[dict] = None) -> Flask:
     app.jinja_env.filters["dt"] = fmt_dt
     app.jinja_env.filters["mask_url"] = mask_url
     app.jinja_env.globals["SOURCE_TYPES"] = SOURCE_TYPES
+    app.jinja_env.globals["category_color"] = category_color
     app.jinja_env.filters["run_status"] = lambda s: STATUS_LABELS.get(s, s)
 
     from src.routes import activity, articles, auth, calendar, collections, dashboard, editorial, exports, settings, sources
