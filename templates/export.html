@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Exports{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Reports and exports</h1><p class="muted">Download filtered article lists in CSV or PDF formats.</p></div></div>
+<div class="card">
+  <a class="btn btn-primary" href="{{ url_for('exports.csv_export') }}">Download CSV</a>
+  <a class="btn btn-ghost" href="{{ url_for('exports.pdf_export') }}">Download PDF</a>
+</div>
+{% if items %}
+  <div class="card-list">
+    {% for item in items %}
+      <div class="card">
+        <h3>{{ item.title }}</h3>
+        <p class="muted">{{ item.source }} · {{ item.status }}</p>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

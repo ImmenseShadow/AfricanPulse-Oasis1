@@ -5,19 +5,31 @@ from dataclasses import dataclass
 from typing import Optional
 
 CATEGORIES = (
-    "Technology",
-    "Education",
-    "Science",
-    "Business and Economy",
     "Politics and Governance",
-    "Society",
+    "Technology and Innovation",
+    "Business and Economy",
+    "Education",
     "Environment",
+    "Security",
     "Health",
+    "International Affairs",
+    "Culture and Society",
+    "Science and Research",
+    "Technology",
+    "Science",
+    "Society",
     "General News",
     "Uncategorized",
 )
 
-STATUSES = ("New", "Under Review", "Selected for Content", "Archived")
+EDITORIAL_STATUSES = ("New", "Under Review", "Approved", "Rejected", "Archived", "Used")
+LEGACY_STATUSES = ("Selected for Content",)
+STATUSES = EDITORIAL_STATUSES + LEGACY_STATUSES
+
+ROLE_ADMIN = "admin"
+ROLE_EDITOR = "editor"
+ROLE_VIEWER = "viewer"
+ROLES = (ROLE_ADMIN, ROLE_EDITOR, ROLE_VIEWER)
 
 SOURCE_RSS = "rss"
 SOURCE_GOOGLE_ALERT = "google_alert"

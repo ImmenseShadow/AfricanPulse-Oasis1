@@ -3,13 +3,17 @@ from __future__ import annotations
 
 from flask import current_app
 
+from src.services.auth_service import AuthService
+from src.services.editorial_service import EditorialService
 from src.services.settings_service import SettingsService
 from src.services.source_service import SourceService
 from src.storage.article_repository import ArticleRepository
 from src.storage.calendar_repository import CalendarRepository
 from src.storage.collection_repository import CollectionRepository
+from src.storage.editorial_repository import EditorialRepository
 from src.storage.settings_repository import SettingsRepository
 from src.storage.source_repository import SourceRepository
+from src.storage.user_repository import UserRepository
 
 
 def db():
@@ -47,3 +51,19 @@ def source_service() -> SourceService:
 
 def collection_manager():
     return current_app.extensions["collection_manager"]
+
+
+def user_repo() -> UserRepository:
+    return UserRepository(db())
+
+
+def auth_service() -> AuthService:
+    return AuthService(user_repo())
+
+
+def editorial_repo() -> EditorialRepository:
+    return EditorialRepository(db())
+
+
+def editorial_service() -> EditorialService:
+    return EditorialService(editorial_repo())

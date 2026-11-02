@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="card narrow-form">
+  <h1>Editorial sign in</h1>
+  <form method="post" action="{{ url_for('auth.login') }}">
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" value="{{ username or '' }}" required>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required>
+    </div>
+    <button class="btn btn-primary" type="submit">Sign in</button>
+  </form>
+</div>
+{% endblock %}

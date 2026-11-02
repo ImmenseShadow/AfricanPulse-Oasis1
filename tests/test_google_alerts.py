@@ -108,6 +108,15 @@ class UrlSafetyTests(unittest.TestCase):
     def test_private_destinations_can_be_enabled_explicitly(self):
         check_destination("http://127.0.0.1:8000/feed", allow_private=True)
 
+    def test_malformed_urls_are_rejected_safely(self):
+        for bad in (
+            "https://example.com:99999/feed",
+            "https://user:pass@example.com/feed",
+            "https://example.com:0/feed",
+        ):
+            with self.assertRaises(UnsafeDestinationError, msg=bad):
+                check_destination(bad)
+
     def test_unresolvable_host_is_rejected(self):
         with patch("src.url_safety.resolve_ips", side_effect=OSError("nope")):
             with self.assertRaises(UnsafeDestinationError):

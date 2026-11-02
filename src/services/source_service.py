@@ -64,7 +64,7 @@ def validate_feed_url(url: str, allow_private: bool = False) -> str:
     try:
         parts = urlsplit(cleaned)
         host = parts.hostname
-        parts.port  # raises ValueError for a bad port
+        port = parts.port  # raises ValueError for a bad port
     except ValueError:
         raise ValidationError("The feed URL is not valid.")
     if parts.scheme.lower() not in ("http", "https"):
@@ -73,6 +73,8 @@ def validate_feed_url(url: str, allow_private: bool = False) -> str:
         raise ValidationError("The feed URL needs a host name.")
     if parts.username or parts.password:
         raise ValidationError("Do not put a username or password in the feed URL.")
+    if port is not None and (port <= 0 or port > 65535):
+        raise ValidationError("The feed URL is not valid.")
     if not allow_private:
         lowered = host.lower()
         blocked = is_blocked_host_name(lowered) or lowered.isdigit()

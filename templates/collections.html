@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Collections{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Collections</h1><p class="muted">Bookmark and group articles by topic or workflow.</p></div></div>
+<div class="card">
+  <h2>Create collection</h2>
+  <form method="post" action="{{ url_for('collections.create_collection') }}">
+    <div class="field"><label for="name">Name</label><input id="name" name="name" required></div>
+    <div class="field"><label for="description">Description</label><textarea id="description" name="description" rows="3"></textarea></div>
+    <div class="field checkbox-row"><label><input type="checkbox" name="is_shared" value="1"> Shared collection</label></div>
+    <button class="btn btn-primary" type="submit">Create</button>
+  </form>
+</div>
+{% if collections %}
+  {% for collection in collections %}
+    <div class="card"><h3>{{ collection.name }}</h3><p class="muted">{{ collection.description or 'No description' }}</p></div>
+  {% endfor %}
+{% else %}
+  <div class="card empty"><h3>No collections yet</h3><p>Create a collection to group related articles.</p></div>
+{% endif %}
+{% endblock %}

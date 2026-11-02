@@ -27,9 +27,22 @@
             <a href="{{ url_for('activity.index') }}"{% if bp == 'activity' %} aria-current="page"{% endif %}>Collection Activity</a>
           </div>
         </details>
+        <a href="{{ url_for('editorial.index') }}"{% if bp == 'editorial' %} aria-current="page"{% endif %}>Editorial</a>
+        <a href="{{ url_for('collections.index') }}"{% if bp == 'collections' %} aria-current="page"{% endif %}>Collections</a>
+        <a href="{{ url_for('exports.index') }}"{% if bp == 'exports' %} aria-current="page"{% endif %}>Reports</a>
         <a href="{{ url_for('calendar.index') }}"{% if bp == 'calendar' %} aria-current="page"{% endif %}>Calendar</a>
         <a href="{{ url_for('settings.index') }}"{% if bp == 'settings' %} aria-current="page"{% endif %}>Settings</a>
       </nav>
+      </nav>
+      <div class="auth-nav">
+        {% if session.get('user_id') %}
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <button class="btn btn-ghost" type="submit">Sign out</button>
+          </form>
+        {% else %}
+          <a class="btn btn-ghost" href="{{ url_for('auth.login_page') }}">Sign in</a>
+        {% endif %}
+      </div>
     </div>
   </header>
   <main id="main" class="container">

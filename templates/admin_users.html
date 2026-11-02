@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}User administration{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>User management</h1><p class="muted">Assign roles and manage account status.</p></div></div>
+<div class="card-list">
+  {% for user in users %}
+    <div class="card">
+      <h3>{{ user.username }}</h3>
+      <p class="muted">Role: {{ user.role }} · Active: {{ 'Yes' if user.active else 'No' }}</p>
+      <form method="post" action="{{ url_for('auth.set_role', user_id=user.id) }}">
+        <select name="role">
+          <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrator</option>
+          <option value="editor" {% if user.role == 'editor' %}selected{% endif %}>Editor</option>
+          <option value="viewer" {% if user.role == 'viewer' %}selected{% endif %}>Viewer</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Update role</button>
+      </form>
+      <form method="post" action="{{ url_for('auth.toggle_user', user_id=user.id) }}">
+        <input type="hidden" name="active" value="{{ 0 if user.active else 1 }}">
+        <button class="btn btn-ghost" type="submit">{{ 'Deactivate' if user.active else 'Activate' }}</button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

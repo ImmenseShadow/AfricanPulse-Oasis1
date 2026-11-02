@@ -53,6 +53,7 @@ def create_app(config: Optional[dict] = None) -> Flask:
         SEED_SOURCES=True,
         FETCH_FEED=fetch_feed,
         ALLOW_PRIVATE_FEEDS=allow_private_feeds(),
+        REQUIRE_LOGIN=False,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         MAX_CONTENT_LENGTH=64 * 1024,
@@ -87,10 +88,14 @@ def create_app(config: Optional[dict] = None) -> Flask:
     app.jinja_env.globals["SOURCE_TYPES"] = SOURCE_TYPES
     app.jinja_env.filters["run_status"] = lambda s: STATUS_LABELS.get(s, s)
 
-    from src.routes import activity, articles, calendar, dashboard, settings, sources
+    from src.routes import activity, articles, auth, calendar, collections, dashboard, editorial, exports, settings, sources
 
-    for module in (dashboard, articles, sources, activity, calendar, settings):
+    for module in (dashboard, articles, sources, activity, calendar, settings, auth, editorial, collections, exports):
         app.register_blueprint(module.bp)
+
+    from src.services.auth_service import AuthService
+    from src.storage.user_repository import UserRepository
+    AuthService(UserRepository(db)).bootstrap_admin_if_configured()
 
     @app.errorhandler(HTTPException)
     def http_error(error: HTTPException):

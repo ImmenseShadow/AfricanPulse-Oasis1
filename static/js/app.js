@@ -12,6 +12,61 @@ document.addEventListener("submit", function (event) {
   }, 0);
 });
 
+(function setupDetailsDropdowns() {
+  var groups = Array.prototype.slice.call(document.querySelectorAll(".nav-group"));
+  if (!groups.length) { return; }
+
+  function closeGroup(group) {
+    if (group && group.hasAttribute("open")) {
+      group.removeAttribute("open");
+    }
+  }
+
+  function closeOthers(activeGroup) {
+    groups.forEach(function (group) {
+      if (group !== activeGroup) {
+        closeGroup(group);
+      }
+    });
+  }
+
+  groups.forEach(function (group) {
+    group.addEventListener("toggle", function () {
+      if (group.open) {
+        closeOthers(group);
+      }
+    });
+  });
+
+  document.addEventListener("click", function (event) {
+    var withinGroup = event.target.closest(".nav-group");
+    var clickedLink = event.target.closest(".nav-group a");
+
+    if (!withinGroup) {
+      groups.forEach(closeGroup);
+      return;
+    }
+
+    if (clickedLink) {
+      window.setTimeout(function () {
+        closeGroup(withinGroup);
+      }, 0);
+      return;
+    }
+
+    if (event.target.closest(".nav-group summary")) {
+      closeOthers(withinGroup);
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") {
+      return;
+    }
+    groups.forEach(closeGroup);
+  });
+})();
+
 (function pollCollection() {
   var box = document.getElementById("collection-status");
   if (!box || box.getAttribute("data-running") !== "true") { return; }

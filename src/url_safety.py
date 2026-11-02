@@ -44,14 +44,22 @@ def check_destination(url: str, allow_private: bool = False) -> None:
     parts = urlsplit(url)
     if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
         raise UnsafeDestinationError("The feed address is not a valid http or https URL.")
+    if parts.username or parts.password:
+        raise UnsafeDestinationError("The feed address is not a valid http or https URL.")
+    try:
+        port = parts.port
+    except ValueError as exc:
+        raise UnsafeDestinationError("The feed address is not a valid http or https URL.") from exc
+    if port is not None and (port <= 0 or port > 65535):
+        raise UnsafeDestinationError("The feed address is not a valid http or https URL.")
     if allow_private:
         return
     host = parts.hostname
     if is_blocked_host_name(host):
         raise UnsafeDestinationError("Feeds on localhost or private network addresses are not allowed.")
-    port = parts.port or (443 if parts.scheme.lower() == "https" else 80)
+    chosen_port = port or (443 if parts.scheme.lower() == "https" else 80)
     try:
-        addresses = resolve_ips(host, port)
+        addresses = resolve_ips(host, chosen_port)
     except (socket.gaierror, UnicodeError, OSError):
         raise UnsafeDestinationError("The feed host name could not be resolved.")
     if not addresses or not all(is_public_ip(a) for a in addresses):

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Editorial{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Editorial workspace</h1><p class="muted">Review status, notes and article workflow.</p></div>
+</div>
+<form method="get" class="card filter-form">
+  <div class="field">
+    <label for="status">Filter by status</label>
+    <select id="status" name="status">
+      <option value="">All statuses</option>
+      {% for s in statuses %}<option value="{{ s }}" {% if current_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field actions-field"><button class="btn btn-primary" type="submit">Apply</button></div>
+</form>
+{% if articles %}
+  <div class="card-list">
+    {% for article in articles %}
+      <article class="card article-card">
+        <h2><a href="{{ url_for('articles.detail', article_id=article.id) }}">{{ article.title }}</a></h2>
+        <p class="muted">{{ article.source }} · {{ article.status }}</p>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card empty"><h3>No articles found</h3><p>There are no articles matching the current editorial review filters.</p></div>
+{% endif %}
+{% endblock %}
